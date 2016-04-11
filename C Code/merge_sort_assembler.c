@@ -20,7 +20,6 @@ float frand(){
 void recursive_merge(int a[], int lo, int hi, int aux[])
 {
     int mid;
-    data_comp_counter++;
     if (hi > lo)
     {
         mid = (lo + hi)/2; // divide the list into two halfs
