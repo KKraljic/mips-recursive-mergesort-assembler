@@ -1,0 +1,12 @@
+Bonuspunkte:
+	- Komfortable Eingabemaske
+	- Aufwändiger Zufallszahlengenerator
+	- bitonic sort oder mergesort
+	- Feheleranalyse
+	- Kommentare
+	- Dokumentation
+
+Abzüge:
+	- Nicht lauffähiges Programm
+	- Nicht an Mips Konvention halten
+	- Nicht Aufrufhierarchie
