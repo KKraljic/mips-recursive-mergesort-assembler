@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 void seed(uint32_t r){
 	//Initializes random generator; r is start value
 }
@@ -96,11 +99,25 @@ void fsort(float *data, unsigned int n){
 
 
 void main(){
-	//Ask for n
-	//error_check_amount_numbers_input
-	//Ask for datarange
-	//error_check_datarange_input
+	int n;
+	int min_value;
+	int max_value;
+//Ask for n
+	printf("Please enter here the amount of numbers that should be generated:");
+	scanf("%i", &n)
+
+	printf("\nPlease enter the min value of the wished data range:");
+	scanf("%i", &min_value);
+//Ask for datarange
+	printf("\nPlease eter the max value of the wished data range:");
+	scanf("%i", &max_value)
+	//error checking
+	if(min_value >= max_value){
+	printf("Error: Your min and max value are either in wrong order or they are the same.");
+	}
+	
 	//generate floating points
 	fsort(*data, n);
+	//print sorted array
 	
 }
