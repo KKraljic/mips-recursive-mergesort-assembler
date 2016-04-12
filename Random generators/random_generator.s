@@ -29,4 +29,22 @@ rand:
   add $t6,$t5,$t2 # (a * r) + b in $t6
   div $t6,$t3     # ((a * r) + b) / m lo = quotient, hi = reminder
   mfhi $v0        #  ((a * r) + b) % m in $v0, since reminder in hi
+  sw $v0,r        # save the new r value in global section
   jr $ra          # jump back to caller
+
+main:
+  li $a0,6 # set list item number as 6
+  jal seed # init r value
+  # print init r value
+  la $t0,r        # get address of global r register
+  lw $a0, 0($t0)  # load r, $a0 = r for syscall
+  li $v0, 1 # print_int for syscall
+  syscall
+  # print rand number
+  jal rand # get rand number
+  move $a0, $v0 # save rand value to print
+  li $v0,1 # print_int
+  syscall
+  # clean exit
+  li $v0, 10
+  syscall
