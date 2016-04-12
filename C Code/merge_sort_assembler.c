@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 void seed(uint32_t r){
 	//Initializes random generator; r is start value
 }
@@ -108,7 +111,7 @@ void main(){
 //Ask for datarange
 	printf("\nPlease eter the max value of the wished data range:");
 	scanf("%i", &max_value)
-	//error_check_amount_numbers_input
+	//error checking
 	if(min_value >= max_value){
 	printf("Error: Your min and max value are either in wrong order or they are the same.");
 	}
