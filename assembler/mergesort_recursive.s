@@ -37,6 +37,12 @@ error_min_max:
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
 	jal main
+
+generate_list_item:							#TBD: In die MAIN packen?
+#$f12 = random_value; $f13 = min_value; $f14 = max_value
+	sub.s $f4, $f14, $f13					# $f4 = max_value - min_value
+	mul.s $f4, $f12, $f4 					# $f4 = random_value * (max_value - min_value)
+	add.s $f0, $f13, $f4 					# $f0 = min_value + random_value * (max_value - min_value)
 	
 main:
 	la $a0, n_input_message					# Load input message for n
