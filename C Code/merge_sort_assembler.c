@@ -36,6 +36,58 @@ void recursive_merge_sort(int a[], int n)
 	printf("The sorted list is:");
     free(aux);
 }
+// function that merges two sub lists
+void merge(int a[],int lo, int mid, int hi, int aux[])
+{
+    int i = lo;
+    int j = mid + 1;
+    int k;
+    // copy the string to the aux at the exactly same positions
+    for(k = lo; k <= hi; k++)
+    {
+        aux[k] = a[k];
+        array_acess_counter += 2;
+    }
+
+    // merge everything back to the original array a
+    for(k = lo; k <= hi; k++)
+    {
+        data_comp_counter++;
+        if(i > mid)  // the first half is already merged in aux, but the second not yet
+        {
+            a[k] = aux[j];
+            j++;
+            array_acess_counter += 2;
+        }
+        else  // the first half isn't empty
+        {
+            data_comp_counter++;
+            if(j > hi)  // the second half has been already merged
+            {
+                a[k]=aux[i]; // add the rest of the first half to the array
+                i++;
+                array_acess_counter += 2;
+            }
+            else
+            {
+                array_acess_counter +=2;
+                data_comp_counter++;
+                if(aux[j] < aux[i])  // compare the values currently under consideration
+                {
+                    a[k]= aux[j];
+                    j++;
+                    array_acess_counter += 2;
+                }
+                else
+                {
+                    a[k]=aux[i];
+                    i++;
+                    array_acess_counter +=2;
+                }
+            }
+        }
+    }
+}
 
 void fsort(float *data, unsigned int n){
 	//Sorts n floating point numbers stored in memory starting from *data
