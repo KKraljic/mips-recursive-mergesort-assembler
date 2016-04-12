@@ -1,4 +1,5 @@
 .data
+str1: .asciiz("")
 
 .text
 
@@ -22,8 +23,6 @@ recursive_merge_sort:
 	
 	#Logic to split the list
 	
-	#check if we're done
-	
 	#Recursive call of mergesort
 	
 	#merge all splitted parts into one list
@@ -32,3 +31,4 @@ exit_sort:
 
 
 main:
+	
