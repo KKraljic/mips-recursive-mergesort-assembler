@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+
 void seed(uint32_t r){
 	//Initializes random generator; r is start value
 }
@@ -35,6 +38,58 @@ void recursive_merge_sort(int a[], int n)
 	printf("The sorted list is:");
     free(aux);
 }
+// function that merges two sub lists
+void merge(int a[],int lo, int mid, int hi, int aux[])
+{
+    int i = lo;
+    int j = mid + 1;
+    int k;
+    // copy the string to the aux at the exactly same positions
+    for(k = lo; k <= hi; k++)
+    {
+        aux[k] = a[k];
+        array_acess_counter += 2;
+    }
+
+    // merge everything back to the original array a
+    for(k = lo; k <= hi; k++)
+    {
+        data_comp_counter++;
+        if(i > mid)  // the first half is already merged in aux, but the second not yet
+        {
+            a[k] = aux[j];
+            j++;
+            array_acess_counter += 2;
+        }
+        else  // the first half isn't empty
+        {
+            data_comp_counter++;
+            if(j > hi)  // the second half has been already merged
+            {
+                a[k]=aux[i]; // add the rest of the first half to the array
+                i++;
+                array_acess_counter += 2;
+            }
+            else
+            {
+                array_acess_counter +=2;
+                data_comp_counter++;
+                if(aux[j] < aux[i])  // compare the values currently under consideration
+                {
+                    a[k]= aux[j];
+                    j++;
+                    array_acess_counter += 2;
+                }
+                else
+                {
+                    a[k]=aux[i];
+                    i++;
+                    array_acess_counter +=2;
+                }
+            }
+        }
+    }
+}
 
 void fsort(float *data, unsigned int n){
 	//Sorts n floating point numbers stored in memory starting from *data
@@ -43,11 +98,25 @@ void fsort(float *data, unsigned int n){
 
 
 void main(){
-	//Ask for n
-	//error_check_amount_numbers_input
-	//Ask for datarange
-	//error_check_datarange_input
+	int n;
+	int min_value;
+	int max_value;
+//Ask for n
+	printf("Please enter here the amount of numbers that should be generated:");
+	scanf("%i", &n)
+
+	printf("\nPlease enter the min value of the wished data range:");
+	scanf("%i", &min_value);
+//Ask for datarange
+	printf("\nPlease eter the max value of the wished data range:");
+	scanf("%i", &max_value)
+	//error checking
+	if(min_value >= max_value){
+	printf("Error: Your min and max value are either in wrong order or they are the same.");
+	}
+	
 	//generate floating points
 	fsort(*data, n);
+	//print sorted array
 	
 }
