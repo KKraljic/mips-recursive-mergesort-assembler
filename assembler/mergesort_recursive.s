@@ -71,43 +71,43 @@ error_exceeded_range:
 # seed initializes an initial random r by multiplying $sp with n
 seed:
 # generate random r
-  multu $sp,$a0   							# random_addr * n
-  mflo $t0        							# random_number = random_addr * n
+	multu $sp, $a0   						# random_addr * n
+	mflo $t0        						# random_number = random_addr * n
 # input and output in $t0 - absolute value
-  sra $t1,$t0,31
-  xor $t0,$t0,$t1
-  sub $t0,$t0,$t1
+	sra $t1, $t0, 31
+	xor $t0, $t0, $t1
+	sub $t0, $t0, $t1
 # end absolute value, in $t1 -1 after operation
-  la $t1,r        							# laod address of global value r
-  sw $t0, 0($t1)  							# r = random_number
-  jr $ra          							# jump back to caller
+	la $t1, r        						# laod address of global value r
+	sw $t0, 0($t1)  						# r = random_number
+	jr $ra          						# jump back to caller
 
 rand:
 # laod all constants
-  lw $t1,const_a  							# load value of const_a into register
-  lw $t2,const_b  							# load value of const_b into register
-  lw $t3,const_m  							# load value of const_m into register
+	lw $t1, const_a  						# load value of const_a into register
+	lw $t2, const_b  						# load value of const_b into register
+	lw $t3, const_m  						# load value of const_m into register
 # calculate the random number $t1 = a, $t2 = b, $t3 = m
-  lw $t4,r  								# load r, $t4 = r
-  multu $t1,$t4 							# (a * r) in $t5
-  mflo $t5
+	lw $t4, r  								# load r, $t4 = r
+	multu $t1, $t4 							# (a * r) in $t5
+	mflo $t5
 # convert to absolute value
 # input and output in $t5 - absolute value
-  sra $t1,$t5,31
-  xor $t5,$t5,$t1
-  sub $t5,$t5,$t1
+	sra $t1, $t5,31
+	xor $t5, $t5, $t1
+	sub $t5, $t5, $t1
 # end absolute value, in $t1 -1 after operation
-  add $t6,$t5,$t2 							# (a * r) + b in $t6
-  div $t6,$t3     							# ((a * r) + b) / m lo = quotient, hi = reminder
-  mfhi $v0        							#  ((a * r) + b) % m in $v0, since reminder in hi
-  sw $v0,r      							# save the new r value in global section
-  jr $ra          							# jump back to caller
+	addu $t6, $t5, $t2 						# (a * r) + b in $t6
+	div $t6, $t3     						# ((a * r) + b) / m lo = quotient, hi = reminder
+	mfhi $v0        						#  ((a * r) + b) % m in $v0, since reminder in hi
+	sw $v0, r      							# save the new r value in global section
+	jr $ra          						# jump back to caller
 	
 frand:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	jal rand								# Jump to rand to get random number between 0 & 2^31 - 1
-	lw $t0, const_max_value						# load content of max_value
+	lw $t0, const_max_value					# load content of max_value
 	mtc1 $t0, $f4							# move max_value to coprocessor
 	cvt.s.w $f4, $f4 						# convert max_vaue from int to single precision float
 	addi $t0, $v0, 0						# $t0 = random number from rand function
@@ -190,7 +190,7 @@ main:
 	syscall 
 	move $a2, $v0							# $a2 = min read from input
 	bge $a2, $s0, error_exceeded_range		# if min >= max_value
-	
+
 	la $a0, max_value_input_message			# Load input message for the max value
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
@@ -202,8 +202,10 @@ main:
 	slt $t0, $a2, $a3						# If min < max then TRUE
 	beq $t0, $zero, exit_sort				# else goto exit_sort
 	beq $a2, $a3, error_min_max				# If min = max goto error_min_max
+	
+	mll $t0, $
+	
 	move $a0, $a1							# move n after all syscalls in $a0 to meet mips convention
-	move $s0, $a0							# save n for counting purposes in $s0
 	jal seed 								# init r value
 	
 	move $a1, $a2							# move min_value to $a0
