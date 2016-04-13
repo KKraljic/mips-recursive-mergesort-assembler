@@ -1,10 +1,12 @@
 .data
+
 #informational strings
 line_break: .asciiz "\n"
 n_input_message: .asciiz "\nPlease enter here the amount of numbers that should be generated:"
 min_value_input_message: .asciiz "\nPlease enter the min value of the wished data range:"
 max_value_input_message: .asciiz "\nPlease enter the max value of the wished data range:"
 succesfully_sorted_message: .asciiz "\n Seems that everything is OK... But never trust a running system. There MUST be a bug! :D"
+
 #error messages
 error_message_message: .asciiz "\nError: Your min and max value are either in wrong order or they are the same. Please try it again.\n\n"
 error_negative_amount_message: .asciiz "\n You tried to get a negative amount. We're not magicians. Try it again."
@@ -13,8 +15,8 @@ error_exceeded_range_message: .asciiz "\n It seems that you are not getting enou
 #constants
 const_max_value: .word 2147483647			# max_value = 2^31 -1
 const_a: .word 1103515245 					# init a, value for 32bit CPU
-const_b: .word 12345 # init b
-const_m: .word 2147483648 # equals 2^(31)
+const_b: .word 12345 						# init b
+const_m: .word 2147483648 					# equals 2^(31)
 r: .space 4
 
 .globl main
@@ -111,7 +113,7 @@ frand:
 	addi $t0, $v0, 0						# $t0 = random number from rand function
 	mtc1 $t0, $f5							# load random number in coprocessor
 	cvt.s.w $f5, $f5 						# convert random number from integer to floating point
-	div.s $f0, $f5, $f4					# $f0 = result = random number / max_random
+	div.s $f0, $f5, $f4						# $f0 = result = random number / max_random
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
 	j $ra									# jump back to calling function
