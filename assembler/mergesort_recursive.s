@@ -23,7 +23,7 @@ r: .space 4
 .text
 
 
-recursive_merge_sort:
+recursive_merge_sort_split:
 #$a0 =  lo; $a1 = hi; $a2 = mid; $a3 = aux; a is written on the stack by calling procedure...
 	slt $t0, $a0, $a1						#If lo < hi then TRUE
 	beq $t0, $zero, exit_sort
@@ -36,7 +36,8 @@ recursive_merge_sort:
 	add $t2, $a0, $a1						#$t1 = lo + hi
 	div $a2, $a1, $t1						#$a2 = mid = (lo + hi) / 2
 	sw $a2, 0($sp)							#save mid on the stack
-	
+
+recursive_merge_sort_merge:
 	
 	#... TBD: Übergabeparameter und co.
 	
@@ -45,7 +46,7 @@ recursive_merge_sort:
 	#Recursive call of mergesort
 	
 	#merge all splitted parts into one list
-exit_sort:
+recursive_merge_sort_exit:
 
 error_min_max:
 	la $a0, error_message_message			# Load input message for the error message, if min is >= max value
@@ -158,11 +159,14 @@ generate_list_loop:
 	jal generate_list_item
 	#TBD: Save on heap
 	mov.s $f12, $f0   						# move $f0 to $f12 for syscall
+	swc1 $f0, 0($fp)						# save item at current position of heap
+	addi $fp, $fp, 4
 	li $v0, 2 								# print_float for syscall
 	syscall
 	la $a0, line_break						# Load input message for the max value
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
+	
 	j generate_list_loop					# jump to lsit loop
 	
 exit_generate_list_loop:
@@ -200,16 +204,21 @@ main:
 	bge $a3, $s0, error_exceeded_range
 	
 	slt $t0, $a2, $a3						# If min < max then TRUE
-	beq $t0, $zero, exit_sort				# else goto exit_sort
+	beq $t0, $zero, error_min_max			# else goto error_min_max
 	beq $a2, $a3, error_min_max				# If min = max goto error_min_max
 	
-	mll $t0, $
+	sll $a0, $a1, 2							# $a0 = size of array = n * 4
+	li $v0, 9								# Syscall to allocate memory on heap
+	syscall 								# takes size from $a0 = n * 4 and allocates the memory on heap
+	move $s1, $v0							# Move end address of heap in $s0
+	move $fp, $s1 							# Set frame pointer to start address of heap
 	
-	move $a0, $a1							# move n after all syscalls in $a0 to meet mips convention
+	move $a0, $a1							# move n after all syscalls in $a0 to meet mips 
 	jal seed 								# init r value
 	
 	move $a1, $a2							# move min_value to $a0
 	move $a2, $a3							# move max_value to $a1
+	move $a3, $s0							# Move first addres of heap in $a3
 	jal generate_list	 					# generate list
 	
 	la $a0, succesfully_sorted_message		# Load successfull message for the max value
