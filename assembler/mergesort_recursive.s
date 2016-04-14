@@ -23,7 +23,7 @@ r: .space 4
 .text
 
 
-recursive_merge_sort:
+recursive_merge_sort_split:
 #$a0 =  lo; $a1 = hi; $a2 = mid; $a3 = aux; a is written on the stack by calling procedure...
 	slt $t0, $a0, $a1						#If lo < hi then TRUE
 	beq $t0, $zero, exit_sort
@@ -36,7 +36,8 @@ recursive_merge_sort:
 	add $t2, $a0, $a1						#$t1 = lo + hi
 	div $a2, $a1, $t1						#$a2 = mid = (lo + hi) / 2
 	sw $a2, 0($sp)							#save mid on the stack
-	
+
+recursive_merge_sort_merge:
 	
 	#... TBD: Übergabeparameter und co.
 	
@@ -45,7 +46,7 @@ recursive_merge_sort:
 	#Recursive call of mergesort
 	
 	#merge all splitted parts into one list
-exit_sort:
+recursive_merge_sort_exit:
 
 error_min_max:
 	la $a0, error_message_message			# Load input message for the error message, if min is >= max value
@@ -71,43 +72,43 @@ error_exceeded_range:
 # seed initializes an initial random r by multiplying $sp with n
 seed:
 # generate random r
-  multu $sp,$a0   							# random_addr * n
-  mflo $t0        							# random_number = random_addr * n
+	multu $sp, $a0   						# random_addr * n
+	mflo $t0        						# random_number = random_addr * n
 # input and output in $t0 - absolute value
-  sra $t1,$t0,31
-  xor $t0,$t0,$t1
-  sub $t0,$t0,$t1
+	sra $t1, $t0, 31
+	xor $t0, $t0, $t1
+	sub $t0, $t0, $t1
 # end absolute value, in $t1 -1 after operation
-  la $t1,r        							# laod address of global value r
-  sw $t0, 0($t1)  							# r = random_number
-  jr $ra          							# jump back to caller
+	la $t1, r        						# laod address of global value r
+	sw $t0, 0($t1)  						# r = random_number
+	jr $ra          						# jump back to caller
 
 rand:
 # laod all constants
-  lw $t1,const_a  							# load value of const_a into register
-  lw $t2,const_b  							# load value of const_b into register
-  lw $t3,const_m  							# load value of const_m into register
+	lw $t1, const_a  						# load value of const_a into register
+	lw $t2, const_b  						# load value of const_b into register
+	lw $t3, const_m  						# load value of const_m into register
 # calculate the random number $t1 = a, $t2 = b, $t3 = m
-  lw $t4,r  								# load r, $t4 = r
-  multu $t1,$t4 							# (a * r) in $t5
-  mflo $t5
+	lw $t4, r  								# load r, $t4 = r
+	multu $t1, $t4 							# (a * r) in $t5
+	mflo $t5
 # convert to absolute value
 # input and output in $t5 - absolute value
-  sra $t1,$t5,31
-  xor $t5,$t5,$t1
-  sub $t5,$t5,$t1
+	sra $t1, $t5,31
+	xor $t5, $t5, $t1
+	sub $t5, $t5, $t1
 # end absolute value, in $t1 -1 after operation
-  add $t6,$t5,$t2 							# (a * r) + b in $t6
-  div $t6,$t3     							# ((a * r) + b) / m lo = quotient, hi = reminder
-  mfhi $v0        							#  ((a * r) + b) % m in $v0, since reminder in hi
-  sw $v0,r      							# save the new r value in global section
-  jr $ra          							# jump back to caller
+	addu $t6, $t5, $t2 						# (a * r) + b in $t6
+	div $t6, $t3     						# ((a * r) + b) / m lo = quotient, hi = reminder
+	mfhi $v0        						#  ((a * r) + b) % m in $v0, since reminder in hi
+	sw $v0, r      							# save the new r value in global section
+	jr $ra          						# jump back to caller
 	
 frand:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	jal rand								# Jump to rand to get random number between 0 & 2^31 - 1
-	lw $t0, const_max_value						# load content of max_value
+	lw $t0, const_max_value					# load content of max_value
 	mtc1 $t0, $f4							# move max_value to coprocessor
 	cvt.s.w $f4, $f4 						# convert max_vaue from int to single precision float
 	addi $t0, $v0, 0						# $t0 = random number from rand function
@@ -158,11 +159,14 @@ generate_list_loop:
 	jal generate_list_item
 	#TBD: Save on heap
 	mov.s $f12, $f0   						# move $f0 to $f12 for syscall
+	swc1 $f0, 0($fp)						# save item at current position of heap
+	addi $fp, $fp, 4
 	li $v0, 2 								# print_float for syscall
 	syscall
 	la $a0, line_break						# Load input message for the max value
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
+	
 	j generate_list_loop					# jump to lsit loop
 	
 exit_generate_list_loop:
@@ -190,7 +194,7 @@ main:
 	syscall 
 	move $a2, $v0							# $a2 = min read from input
 	bge $a2, $s0, error_exceeded_range		# if min >= max_value
-	
+
 	la $a0, max_value_input_message			# Load input message for the max value
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
@@ -200,14 +204,21 @@ main:
 	bge $a3, $s0, error_exceeded_range
 	
 	slt $t0, $a2, $a3						# If min < max then TRUE
-	beq $t0, $zero, exit_sort				# else goto exit_sort
+	beq $t0, $zero, error_min_max			# else goto error_min_max
 	beq $a2, $a3, error_min_max				# If min = max goto error_min_max
-	move $a0, $a1							# move n after all syscalls in $a0 to meet mips convention
-	move $s0, $a0							# save n for counting purposes in $s0
+	
+	sll $a0, $a1, 2							# $a0 = size of array = n * 4
+	li $v0, 9								# Syscall to allocate memory on heap
+	syscall 								# takes size from $a0 = n * 4 and allocates the memory on heap
+	move $s1, $v0							# Move end address of heap in $s0
+	move $fp, $s1 							# Set frame pointer to start address of heap
+	
+	move $a0, $a1							# move n after all syscalls in $a0 to meet mips 
 	jal seed 								# init r value
 	
 	move $a1, $a2							# move min_value to $a0
 	move $a2, $a3							# move max_value to $a1
+	move $a3, $s0							# Move first addres of heap in $a3
 	jal generate_list	 					# generate list
 	
 	la $a0, succesfully_sorted_message		# Load successfull message for the max value
