@@ -70,8 +70,9 @@ exit_split:
 	
 merge:
 	lw $t0, 0($sp)							# get output array addres aux from stack
-	addi $sp, $sp, -32						# make space on stack
-	sw $ra, 28($sp)							# save jump back address on stack
+	addi $sp, $sp, -36						# make space on stack
+	sw $ra, 32($sp)							# save jump back address on stack
+	sw $s7, 28($sp)
 	sw $s6, 24($sp)
 	sw $s5, 20($sp)
 	sw $s4, 16($sp)							# save $s4 on stack
@@ -86,7 +87,7 @@ merge:
 	move $s1, $a1							# $s1 = lo
 	move $s0, $a0							# $s0 = input array address a
 	
-	move $t0, $s1							# $t0 = i = lo
+	move $s7, $s1							# $s7 = i = lo
 	addi $s5, $s2, 1						# $s5 = j = mid + 1
 	move $s6, $s1 							# $s6 = k = lo
 	j merge_first_loop						
@@ -109,8 +110,12 @@ merge_second_loop_initiation:
 	move $s6, $s1							# $s6 = k = lo
 	j merge_second_loop
 
-merge_second_loop
-	bgt $s6, $s3, merge_second_loop			# if k > hi goto merge_second_loop
+merge_second_loop:
+	bgt $s6, $s3, exit_second_loop			# if k > hi goto exit_second_loop
+	j first_lvl_if
+	
+first_lvl_if:
+	ble $s7, $s2, first_lvl_else
 	move $a0, $s0							# $a0 = a
 	move $a1, $s4							# $a1 = aux
 	move $a2, $s6							# $a2 = k
@@ -118,21 +123,81 @@ merge_second_loop
 	
 	jal swap_array_content
 	
-	
+	addi $s5, $s5, 1 						# $s5 = j = j++
+	move $a3, $s5							# $a3 = j	
+
 	addi $s6, $s6, 1						# $s6 = k + 1
-	j merge_second_loop						# go back to loop beginning
-	
-first_lvl_if:
+	j merge_second_loop						# go back to loop beginning	
 
 first_lvl_else:
+	ble $s5, $s3, second_lvl_else
+	j second_lvl_if
 
 second_lvl_if:
+	move $a0, $s0							# $a0 = a
+	move $a1, $s4							# $a1 = aux
+	move $a2, $s6							# $a2 = k
+	move $a3, $s7							# $a3 = i
+	
+	jal swap_array_content
+	addi $s7, $s7, 1 						# $s7 = i = i++
+	
+	addi $s6, $s6, 1						# $s6 = k + 1
+	j merge_second_loop						# go back to loop beginning	
 
 second_lvl_else:
+	sll $t0, $s6, 2 						# $t0 = j * 4
+	sll $t1, $a3, 20						# $t1 = i * 4
+	add $t0, $a0, $t0 						# $t0 = address of aux[j]						
+	add $t1, $a1, $t1						# $t1 = address of aux[i]
+	lw $t0, 0($t0)							# $t0 = content of aux[j]
+	lw $t1, 0($t1) 							# $t1 = content of aux[i]
+	sw $t0, 0($t0)							# content of 0($t1) = content of aux[j]
+	sw $t1, 0($t1)							# content of 0($t1) = content of aux[i]
+	
+	bge $t0, $t1, third_lvl_else			# if aux[j] >= aux[i] goto third_lvl_else
+	j third_lvl_if							
 
 third_lvl_if:
+	move $a0, $s0							# $a0 = a
+	move $a1, $s4							# $a1 = aux
+	move $a2, $s6							# $a2 = k
+	move $a3, $s5							# $a3 = j
+	
+	jal swap_array_content
+	addi $s5, $s5, 1 						# $s5 = j = j++
+	
+	addi $s6, $s6, 1						# $s6 = k + 1
+	j merge_second_loop						# go back to loop beginning	
 
 third_lvl_else:
+	move $a0, $s0							# $a0 = a
+	move $a1, $s4							# $a1 = aux
+	move $a2, $s6							# $a2 = k
+	move $a3, $s7							# $a3 = i
+	
+	jal swap_array_content
+	addi $s7, $s7, 1 						# $s7 = i = i++
+	
+	addi $s6, $s6, 1						# $s6 = k + 1
+	j merge_second_loop						# go back to loop beginning	
+
+exit_second_loop:
+
+	lw $ra, 32($sp)							# restore jump back address on stack
+	lw $s7, 28($sp)
+	lw $s6, 24($sp)
+	lw $s5, 20($sp)
+	lw $s4, 16($sp)							# restore $s4 on stack
+	lw $s3, 12($sp)							# restore $s3 on stack
+	lw $s2, 8($sp)							# restore $s2 on stack
+	lw $s1, 4($sp)							# restore $s1 on stack
+	lw $s0, 0($sp)							# restore $s0 on stack
+	
+	addi $sp, $sp, 36						# make space on stack
+	
+	jr $ra
+
 
 
 swap_array_content: 
@@ -147,7 +212,7 @@ swap_array_content:
 	lw $t4, 0($t3)							# $t4 = content of a[j]
 	sw $t4, 0($t2)							# content of 0($t4) = content of aux[k]
 	
-	lw $ra, $0($sp)							# load jump back address from stack
+	lw $ra, 0($sp)							# load jump back address from stack
 	addi $sp, $sp, 4						# free memory from stack
 	jr $ra
 	
