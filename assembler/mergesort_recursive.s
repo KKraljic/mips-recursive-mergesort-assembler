@@ -54,7 +54,9 @@ exit_split:
 	move $a1, $s1							# $a1 = lo
 	move $a2, $s4							# $a2 = mid
 	move $a3, $s2							# $a3 = hi
-	addi $sp, $sp, -4						# make space on stack for $s3
+	addi $sp, $sp, -8						# make space on stack for $s3
+	#####POTENTIAL MISSTAKE RIGHT HERE, next commented line is here for discussion####
+	#sw $ra, 4($sp)							# write jump back address on stack
 	sw $s3, 0($sp)							# write $s3 = aux on stack
 	jal merge
 	
