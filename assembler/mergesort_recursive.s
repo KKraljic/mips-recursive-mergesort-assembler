@@ -22,31 +22,238 @@ r: .space 4
 .globl main
 .text
 
-
-recursive_merge_sort_split:
-#$a0 =  lo; $a1 = hi; $a2 = mid; $a3 = aux; a is written on the stack by calling procedure...
-	slt $t0, $a0, $a1						#If lo < hi then TRUE
-	beq $t0, $zero, exit_sort
-	addi $sp, $sp, -12						#decrease stackpointer to store the mid value, sp and fp
-	sw $ra, 8($sp)							#save ra on the stack
-	sw $fp, 4($sp)							#save fp on the stack
-	#addi $fp, $sp, XXX						#set fp at the beginning of the frame TBD: Where is begin of this frame?
+recursive_merge:
+#$a0 = a (address to input array on heap); $a1 = lo; $a2 = hi; $a3 = aux
+	addi $sp, $sp, -24						#decrease stackpointer to store the mid value, sp and fp
+	sw $ra, 20($sp)							#save ra on the stack
+	sw $s4, 16($sp)
+	sw $s3, 12($sp)							# save $s3 on stack
+	sw $s2, 8($sp)							# save $s2 on stack
+	sw $s1, 4($sp)							#save $s1 on stack
+	sw $s0, 0($sp)							#save $s0 on stack
+	
+	move $s0, $a0							# $s0 = a
+	move $s1, $a1							# $s1 = lo
+	move $s2, $a2							# $s2 = hi
+	move $s3, $a3							# $s3 = aux
+	
+	bge $a1, $a2, exit_split				#If lo >= hi then stop splitting
 #Calculation of mid
-	addi $t1, $t1, 2						#$t0 = 2
-	add $t2, $a0, $a1						#$t1 = lo + hi
-	div $a2, $a1, $t1						#$a2 = mid = (lo + hi) / 2
-	sw $a2, 0($sp)							#save mid on the stack
+	add $s4, $a1, $a2						#$s4 = lo + hi
+	srl $s4, $s4, 1							#$s4 = mid = (lo + hi) / 2
+	move $s1, $a2							#save hi in $s1 for recursive calls later
+	move $a3, $s4							#$a3 = new mid
+	jal recursive_merge
+	
+	addi $t0, $s4, 1						# $t0 = mid = mid + 1
+	move $a1, $t0 							# $a1 = mid + 1
+	jal recursive_merge
 
-recursive_merge_sort_merge:
+exit_split:
+	move $a0, $s0							# $a0 = address of input array	
+	move $a1, $s1							# $a1 = lo
+	move $a2, $s4							# $a2 = mid
+	move $a3, $s2							# $a3 = hi
+	addi $sp, $sp, -4						# make space on stack for $s3
+	sw $s3, 0($sp)							# write $s3 = aux on stack
+	jal merge
 	
-	#... TBD: Übergabeparameter und co.
+	lw $ra, 20($sp)							#Restore ra from the stack
+	lw $s4, 16($sp)
+	lw $s3, 12($sp)							# Restore $s3 from stack
+	lw $s2, 8($sp)							# Restore $s2 from stack
+	lw $s1, 4($sp)							# Restore $s1 from stack
+	lw $s0, 0($sp)							# Restore $s0 from stack
+	addi $sp, $sp, -24						# Free memory on stack
 	
-	#Logic to split the list
+	jr $ra
 	
-	#Recursive call of mergesort
+merge:
+	lw $t0, 0($sp)							# get output array addres aux from stack
+	addi $sp, $sp, -36						# make space on stack
+	sw $ra, 32($sp)							# save jump back address on stack
+	sw $s7, 28($sp)
+	sw $s6, 24($sp)
+	sw $s5, 20($sp)
+	sw $s4, 16($sp)							# save $s4 on stack
+	sw $s3, 12($sp)							# save $s3 on stack
+	sw $s2, 8($sp)							# save $s2 on stack
+	sw $s1, 4($sp)							# save $s1 on stack
+	sw $s0, 0($sp)							# save $s0 on stack
 	
-	#merge all splitted parts into one list
-recursive_merge_sort_exit:
+	move $s4, $t0							# $s4 = aux
+	move $s3, $a3							# $s3 = hi
+	move $s2, $a2							# $s2 = mid
+	move $s1, $a1							# $s1 = lo
+	move $s0, $a0							# $s0 = input array address a
+	
+	move $s7, $s1							# $s7 = i = lo
+	addi $s5, $s2, 1						# $s5 = j = mid + 1
+	move $s6, $s1 							# $s6 = k = lo
+	j merge_first_loop						
+	
+merge_first_loop:
+	bgt $s6, $s3, merge_second_loop_initiation# if k > hi goto merge_second_loop
+	
+	move $a0, $s0							# $a0 = a
+	move $a1, $s4							# $a1 = aux
+	move $a2, $s6							# $a2 = k
+	move $a3, $s6							# $a3 = k
+	
+	jal swap_array_content
+	
+	addi $s6, $s6, 1						# $s6 = k + 1
+	j merge_first_loop						# go back to loop beginning
+	
+
+merge_second_loop_initiation:
+	move $s6, $s1							# $s6 = k = lo
+	j merge_second_loop
+
+merge_second_loop:
+	bgt $s6, $s3, exit_second_loop			# if k > hi goto exit_second_loop
+	j first_lvl_if
+	
+first_lvl_if:
+	ble $s7, $s2, first_lvl_else
+	move $a0, $s0							# $a0 = a
+	move $a1, $s4							# $a1 = aux
+	move $a2, $s6							# $a2 = k
+	move $a3, $s5							# $a3 = j
+	
+	jal swap_array_content
+	
+	addi $s5, $s5, 1 						# $s5 = j = j++
+	move $a3, $s5							# $a3 = j	
+
+	addi $s6, $s6, 1						# $s6 = k + 1
+	j merge_second_loop						# go back to loop beginning	
+
+first_lvl_else:
+	ble $s5, $s3, second_lvl_else
+	j second_lvl_if
+
+second_lvl_if:
+	move $a0, $s0							# $a0 = a
+	move $a1, $s4							# $a1 = aux
+	move $a2, $s6							# $a2 = k
+	move $a3, $s7							# $a3 = i
+	
+	jal swap_array_content
+	addi $s7, $s7, 1 						# $s7 = i = i++
+	
+	addi $s6, $s6, 1						# $s6 = k + 1
+	j merge_second_loop						# go back to loop beginning	
+
+second_lvl_else:
+	sll $t0, $s6, 2 						# $t0 = j * 4
+	sll $t1, $a3, 20						# $t1 = i * 4
+	add $t0, $a0, $t0 						# $t0 = address of aux[j]						
+	add $t1, $a1, $t1						# $t1 = address of aux[i]
+	lw $t0, 0($t0)							# $t0 = content of aux[j]
+	lw $t1, 0($t1) 							# $t1 = content of aux[i]
+	sw $t0, 0($t0)							# content of 0($t1) = content of aux[j]
+	sw $t1, 0($t1)							# content of 0($t1) = content of aux[i]
+	
+	bge $t0, $t1, third_lvl_else			# if aux[j] >= aux[i] goto third_lvl_else
+	j third_lvl_if							
+
+third_lvl_if:
+	move $a0, $s0							# $a0 = a
+	move $a1, $s4							# $a1 = aux
+	move $a2, $s6							# $a2 = k
+	move $a3, $s5							# $a3 = j
+	
+	jal swap_array_content
+	addi $s5, $s5, 1 						# $s5 = j = j++
+	
+	addi $s6, $s6, 1						# $s6 = k + 1
+	j merge_second_loop						# go back to loop beginning	
+
+third_lvl_else:
+	move $a0, $s0							# $a0 = a
+	move $a1, $s4							# $a1 = aux
+	move $a2, $s6							# $a2 = k
+	move $a3, $s7							# $a3 = i
+	
+	jal swap_array_content
+	addi $s7, $s7, 1 						# $s7 = i = i++
+	
+	addi $s6, $s6, 1						# $s6 = k + 1
+	j merge_second_loop						# go back to loop beginning	
+
+exit_second_loop:
+
+	lw $ra, 32($sp)							# restore jump back address on stack
+	lw $s7, 28($sp)
+	lw $s6, 24($sp)
+	lw $s5, 20($sp)
+	lw $s4, 16($sp)							# restore $s4 on stack
+	lw $s3, 12($sp)							# restore $s3 on stack
+	lw $s2, 8($sp)							# restore $s2 on stack
+	lw $s1, 4($sp)							# restore $s1 on stack
+	lw $s0, 0($sp)							# restore $s0 on stack
+	
+	addi $sp, $sp, 36						# make space on stack
+	
+	jr $ra
+
+
+
+swap_array_content: 
+# $a0 = a ; $a1 = aux; $a2 = k ; $a3 = j;
+	addi $sp, $sp, -4						# reserve memory on stack
+	sw $ra, 0($sp)							# save $ra on stack
+	
+	sll $t0, $a2, 2 						# $t0 = k * 4
+	sll $t1, $a3, 20						# $t1 = j * 4
+	add $t2, $a0, $t0 						# $t2 = address of aux[k]						
+	add $t3, $a1, $t1						# $t3 = address of a[j]
+	lw $t4, 0($t3)							# $t4 = content of a[j]
+	sw $t4, 0($t2)							# content of 0($t4) = content of aux[k]
+	
+	lw $ra, 0($sp)							# load jump back address from stack
+	addi $sp, $sp, 4						# free memory from stack
+	jr $ra
+	
+	
+	
+fsort:
+	addi $sp, $sp, -8						# Reserve space on stack
+	sw $ra, 4($sp)							# Save jump back address on stack
+	sw $s0, 0($sp)							# Save $s0 on memory 
+	move $t0, $a0							# Move start address of input array on heap to $t0
+	move $t1, $a1							# Move n to $t1
+	sll $a0, $a1, 2							# $a0 = size of array = n * 4
+	li $v0, 9								# Syscall to allocate memory on heap
+	syscall 								# takes size from $a0 = n * 4 and allocates the memory on heap
+	move $fp, $v0 							# Set $fp to new start address of output array
+	#Prepare arguments for subprocedure
+	move $s0, $v0							# Save start address of target array in $s0
+	move $a0, $t0 							# $a0 = start address of input array on heap
+	move $a1, $zero 						# $a1 = 0
+	addi $a2, $t1, -1						# $a2 = n = n-1
+	move $a3, $s0							# $a3 = start address of target heap
+	
+	jal recursive_merge
+	#TBD: Print
+	
+	sub $t2, $s0, $fp						# calculate negative difference between heap end and start of aux
+	add $fp, $fp, $t2						# reset fp to correct stack address
+	move $a0, $t2							# pass the bytes to free the heap
+	li $v0, 9								# Syscall to free memory on heap
+	syscall 								# free heap by $fp - aux
+	
+	lw $ra, 4($sp)							# Restore jump back address from stack
+	lw $s0, 0($sp)							# Restore $s0 from stack 
+	addi $sp, $sp, 8						# Free space from stack
+	
+	jr	$ra									# Jump back to calling function
+	
+	
+	
+	
+	
 
 error_min_max:
 	la $a0, error_message_message			# Load input message for the error message, if min is >= max value
@@ -186,7 +393,8 @@ main:
 	syscall 
 	move $a1, $v0							# $a1 = n read from input
 	ble $a1, $zero, error_negative_amount	# if wanted amount of numbers is negative, show error
-	
+	move $s2, $a1							# save n in $s2
+		
 	la $a0, min_value_input_message			# Load input message for the min value
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
@@ -210,7 +418,7 @@ main:
 	sll $a0, $a1, 2							# $a0 = size of array = n * 4
 	li $v0, 9								# Syscall to allocate memory on heap
 	syscall 								# takes size from $a0 = n * 4 and allocates the memory on heap
-	move $s1, $v0							# Move end address of heap in $s0
+	move $s1, $v0							# Move start address of heap in $s0
 	move $fp, $s1 							# Set frame pointer to start address of heap
 	
 	move $a0, $a1							# move n after all syscalls in $a0 to meet mips 
@@ -220,6 +428,10 @@ main:
 	move $a2, $a3							# move max_value to $a1
 	move $a3, $s0							# Move first addres of heap in $a3
 	jal generate_list	 					# generate list
+	
+	move $a0, $s0 							# $a0 = start address of heap
+	move $a1, $s2							# Restore n from $s2
+	jal fsort								# Call fsort
 	
 	la $a0, succesfully_sorted_message		# Load successfull message for the max value
 	li $v0, 4								# Load I/O code to print string to console
