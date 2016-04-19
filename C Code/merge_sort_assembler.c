@@ -35,7 +35,7 @@ void recursive_merge_sort(int a[], int n)
 {
     int *aux = (int *) malloc(n * sizeof(int));
     recursive_merge(a,0,n-1,aux);
-	printf("The sorted list is:");
+		printf("The sorted list is:");
     free(aux);
 }
 // function that merges two sub lists
@@ -84,7 +84,7 @@ void merge(int a[],int lo, int mid, int hi, int aux[])
 
 void fsort(float *data, unsigned int n){
 	//Sorts n floating point numbers stored in memory starting from *data
-	
+
 }
 
 
@@ -105,9 +105,9 @@ void main(){
 	if(min_value >= max_value){
 	printf("Error: Your min and max value are either in wrong order or they are the same.");
 	}
-	
+
 	//generate floating points
 	fsort(*data, n);
 	//print sorted array
-	
+
 }
