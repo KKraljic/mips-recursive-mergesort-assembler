@@ -37,36 +37,48 @@ recursive_merge:
 	move $s2, $a2							# $s2 = hi
 	move $s3, $a3							# $s3 = aux
 	
-	bge $a1, $a2, exit_split				#If lo >= hi then stop splitting
+	bge $s1, $s2, exit_split				# If lo >= hi then stop splitting
 #Calculation of mid
-	add $s4, $a1, $a2						#$s4 = lo + hi
-	srl $s4, $s4, 1							#$s4 = mid = (lo + hi) / 2
-	move $s1, $a2							#save hi in $s1 for recursive calls later
-	move $a3, $s4							#$a3 = new mid
+	add $s4, $a1, $a2						# $s4 = lo + hi
+	srl $s4, $s4, 1							# $s4 = mid = (lo + hi) / 2
+	move $s1, $a2							# save hi in $s1 for recursive calls later
+	move $a2, $s4							# $a2 = new mid
 	jal recursive_merge
 	
 	addi $t0, $s4, 1						# $t0 = mid = mid + 1
+	####TO BE DONE TBD why is $t0 overwriting our merge function?
 	move $a1, $t0 							# $a1 = mid + 1
+	move $a2, $s2							# $a2 = hi
 	jal recursive_merge
-
-exit_split:
+	
 	move $a0, $s0							# $a0 = address of input array	
 	move $a1, $s1							# $a1 = lo
+	
+	
 	move $a2, $s4							# $a2 = mid
-	move $a3, $s2							# $a3 = hi
-	addi $sp, $sp, -8						# make space on stack for $s3
-	#####POTENTIAL MISSTAKE RIGHT HERE, next commented line is here for discussion####
-	#sw $ra, 4($sp)							# write jump back address on stack
+	move $a3, $s2							# $a3 = hi 
+	addi $sp, $sp, -4						# reserve place on stack
 	sw $s3, 0($sp)							# write $s3 = aux on stack
 	jal merge
 	
+	lw $ra, 20($sp)							# Load ra from stack
+	lw $s4, 16($sp)
+	lw $s3, 12($sp)							# Load $s3 on stack
+	lw $s2, 8($sp)							# Load $s2 on stack
+	lw $s1, 4($sp)							# Load $s1 on stack
+	lw $s0, 0($sp)							# Load $s0 on stack
+	addi $sp, $sp, 24						#increase stackpointer to free the mid value, sp and fp
+	
+	jr $ra
+
+exit_split:
 	lw $ra, 20($sp)							#Restore ra from the stack
 	lw $s4, 16($sp)
 	lw $s3, 12($sp)							# Restore $s3 from stack
 	lw $s2, 8($sp)							# Restore $s2 from stack
 	lw $s1, 4($sp)							# Restore $s1 from stack
 	lw $s0, 0($sp)							# Restore $s0 from stack
-	addi $sp, $sp, -24						# Free memory on stack
+	addi $sp, $sp, 24						# Free memory on stack
 	
 	jr $ra
 	
@@ -97,8 +109,8 @@ merge:
 merge_first_loop:
 	bgt $s6, $s3, merge_second_loop_initiation# if k > hi goto merge_second_loop
 	
-	move $a0, $s0							# $a0 = a
-	move $a1, $s4							# $a1 = aux
+	move $a0, $s4							# $a0 = aux
+	move $a1, $s0							# $a1 = a
 	move $a2, $s6							# $a2 = k
 	move $a3, $s6							# $a3 = k
 	
@@ -117,7 +129,7 @@ merge_second_loop:
 	j first_lvl_if
 	
 first_lvl_if:
-	ble $s7, $s2, first_lvl_else
+	ble $s7, $s2, first_lvl_else			# if i <= mid goto else
 	move $a0, $s0							# $a0 = a
 	move $a1, $s4							# $a1 = aux
 	move $a2, $s6							# $a2 = k
@@ -132,7 +144,7 @@ first_lvl_if:
 	j merge_second_loop						# go back to loop beginning	
 
 first_lvl_else:
-	ble $s5, $s3, second_lvl_else
+	ble $s5, $s3, second_lvl_else			# if j <= hi goto else
 	j second_lvl_if
 
 second_lvl_if:
@@ -150,12 +162,10 @@ second_lvl_if:
 second_lvl_else:
 	sll $t0, $s6, 2 						# $t0 = j * 4
 	sll $t1, $a3, 20						# $t1 = i * 4
-	add $t0, $a0, $t0 						# $t0 = address of aux[j]						
+	add $t0, $a1, $t0 						# $t0 = address of aux[j]						
 	add $t1, $a1, $t1						# $t1 = address of aux[i]
 	lw $t0, 0($t0)							# $t0 = content of aux[j]
 	lw $t1, 0($t1) 							# $t1 = content of aux[i]
-	sw $t0, 0($t0)							# content of 0($t1) = content of aux[j]
-	sw $t1, 0($t1)							# content of 0($t1) = content of aux[i]
 	
 	bge $t0, $t1, third_lvl_else			# if aux[j] >= aux[i] goto third_lvl_else
 	j third_lvl_if							
@@ -196,7 +206,7 @@ exit_second_loop:
 	lw $s1, 4($sp)							# restore $s1 on stack
 	lw $s0, 0($sp)							# restore $s0 on stack
 	
-	addi $sp, $sp, 36						# make space on stack
+	addi $sp, $sp, 40						# make space on stack + delete aux[k] from stack
 	
 	jr $ra
 
@@ -208,11 +218,11 @@ swap_array_content:
 	sw $ra, 0($sp)							# save $ra on stack
 	
 	sll $t0, $a2, 2 						# $t0 = k * 4
-	sll $t1, $a3, 20						# $t1 = j * 4
-	add $t2, $a0, $t0 						# $t2 = address of aux[k]						
-	add $t3, $a1, $t1						# $t3 = address of a[j]
-	lw $t4, 0($t3)							# $t4 = content of a[j]
-	sw $t4, 0($t2)							# content of 0($t4) = content of aux[k]
+	sll $t1, $a3, 2							# $t1 = j * 4
+	addu $t2, $a0, $t0 						# $t2 = address of a[k]						
+	addu $t3, $a1, $t1						# $t3 = address of aux[j]
+	lw $t4, 0($t3)							# $t4 = content of aux[j]
+	sw $t4, 0($t2)							# a[k] = aux[j]
 	
 	lw $ra, 0($sp)							# load jump back address from stack
 	addi $sp, $sp, 4						# free memory from stack
@@ -420,7 +430,7 @@ main:
 	sll $a0, $a1, 2							# $a0 = size of array = n * 4
 	li $v0, 9								# Syscall to allocate memory on heap
 	syscall 								# takes size from $a0 = n * 4 and allocates the memory on heap
-	move $s1, $v0							# Move start address of heap in $s0
+	move $s1, $v0							# Move start address of heap in $s1
 	move $fp, $s1 							# Set frame pointer to start address of heap
 	
 	move $a0, $a1							# move n after all syscalls in $a0 to meet mips 
@@ -428,10 +438,10 @@ main:
 	
 	move $a1, $a2							# move min_value to $a0
 	move $a2, $a3							# move max_value to $a1
-	move $a3, $s0							# Move first addres of heap in $a3
+	move $a3, $s1							# Move first addres of heap in $a3
 	jal generate_list	 					# generate list
 	
-	move $a0, $s0 							# $a0 = start address of heap
+	move $a0, $s1 							# $a0 = start address of heap
 	move $a1, $s2							# Restore n from $s2
 	jal fsort								# Call fsort
 	
