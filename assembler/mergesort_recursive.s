@@ -144,10 +144,10 @@ merge_second_loop_initiation:
 
 merge_second_loop:
 	bgt $s6, $s3, exit_second_loop			# if k > hi goto exit_second_loop
-	j first_lvl_if
-
+	bgt $s7, $s2, first_lvl_if				# if i > mid goto if
+	j first_lvl_else						# else
+	
 first_lvl_if:
-	ble $s7, $s2, first_lvl_else			# if i <= mid goto else
 	move $a0, $s0							# $a0 = a
 	move $a1, $s4							# $a1 = aux
 	move $a2, $s6							# $a2 = k
@@ -159,14 +159,13 @@ first_lvl_if:
 	syscall									# print string
 
 	addi $s5, $s5, 1 						# $s5 = j = j++
-	move $a3, $s5							# $a3 = j
 
 	addi $s6, $s6, 1						# $s6 = k + 1
 	j merge_second_loop						# go back to loop beginning
 
 first_lvl_else:
-	ble $s5, $s3, second_lvl_else			# if j <= hi goto else
-	j second_lvl_if
+	bgt $s5, $s3, second_lvl_if				# if j > hi goto if
+	j second_lvl_else
 
 second_lvl_if:
 	move $a0, $s0							# $a0 = a
@@ -185,16 +184,16 @@ second_lvl_if:
 
 second_lvl_else:
 	sll $t0, $s6, 2 						# $t0 = j * 4
-	sll $t1, $a3, 2						# $t1 = i * 4
+	sll $t1, $a3, 2							# $t1 = i * 4
 	add $t0, $a1, $t0 						# $t0 = address of aux[j]
 	add $t1, $a1, $t1						# $t1 = address of aux[i]
 
 	lwc1 $f0, 0($t0)						# $f0 = content of aux[j]
 	lwc1 $f1, 0($t1) 						# $f1 = content of aux[i]
 
-	c.le.s $f1, $f0
-	bc1t third_lvl_else						# if aux[i] <= aux[j] goto third_lvl_else
-	j third_lvl_if
+	c.lt.s $f1, $f0
+	bc1t third_lvl_if						# if aux[j] < aux[i] goto third_lvl_else
+	j third_lvl_else
 
 third_lvl_if:
 	move $a0, $s0							# $a0 = a
