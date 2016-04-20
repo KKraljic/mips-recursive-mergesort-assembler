@@ -130,9 +130,6 @@ merge_first_loop:
 	move $a3, $s6							# $a3 = k
 
 	jal swap_array_content
-	la $a0, error_message_one				# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
 
 	addi $s6, $s6, 1						# $s6 = k + 1
 	j merge_first_loop						# go back to loop beginning
@@ -154,9 +151,6 @@ first_lvl_if:
 	move $a3, $s5							# $a3 = j
 
 	jal swap_array_content
-	la $a0, error_message_two				# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
 
 	addi $s5, $s5, 1 						# $s5 = j = j++
 
@@ -174,9 +168,7 @@ second_lvl_if:
 	move $a3, $s7							# $a3 = i
 
 	jal swap_array_content
-	la $a0, error_message_three				# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
+	
 	addi $s7, $s7, 1 						# $s7 = i = i++
 
 	addi $s6, $s6, 1						# $s6 = k + 1
@@ -202,9 +194,7 @@ third_lvl_if:
 	move $a3, $s5							# $a3 = j
 
 	jal swap_array_content
-	la $a0, error_message_four				# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
+	
 	addi $s5, $s5, 1 						# $s5 = j = j++
 
 	addi $s6, $s6, 1						# $s6 = k + 1
@@ -217,12 +207,10 @@ third_lvl_else:
 	move $a3, $s7							# $a3 = i
 
 	jal swap_array_content
-	la $a0, error_message_five				# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
+	
 	addi $s7, $s7, 1 						# $s7 = i = i++
-
 	addi $s6, $s6, 1						# $s6 = k + 1
+	
 	j merge_second_loop						# go back to loop beginning
 
 exit_second_loop:
@@ -254,15 +242,7 @@ swap_array_content:
 	addu $t3, $a1, $t1						# $t3 = address of aux[j]
 	lw $t4, 0($t3)							# $t4 = content of aux[j]
 	sw $t4, 0($t2)							# a[k] = aux[j]
-	#Debug...
-	lwc1 $f12, 0($t2)						# save floating point number in $f12
-
-	li $v0, 2 								# print_float for syscall
-	syscall
-	la $a0, line_break						# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
-
+	
 	lw $ra, 0($sp)							# load jump back address from stack
 	addi $sp, $sp, 4						# free memory from stack
 	jr $ra
