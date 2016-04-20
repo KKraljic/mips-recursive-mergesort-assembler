@@ -183,15 +183,15 @@ second_lvl_if:
 	j merge_second_loop						# go back to loop beginning
 
 second_lvl_else:
-	sll $t0, $s6, 2 						# $t0 = j * 4
-	sll $t1, $a3, 2							# $t1 = i * 4
+	sll $t0, $s5, 2 						# $t0 = j * 4
+	sll $t1, $s7, 2							# $t1 = i * 4
 	add $t0, $s4, $t0 						# $t0 = address of aux[j]
 	add $t1, $s4, $t1						# $t1 = address of aux[i]
 
 	lwc1 $f0, 0($t0)						# $f0 = content of aux[j]
 	lwc1 $f1, 0($t1) 						# $f1 = content of aux[i]
 
-	c.lt.s $f1, $f0
+	c.lt.s $f0, $f1
 	bc1t third_lvl_if						# if aux[j] < aux[i] goto third_lvl_else
 	j third_lvl_else
 
