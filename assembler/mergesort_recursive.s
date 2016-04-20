@@ -8,6 +8,15 @@ max_value_input_message: .asciiz "\nPlease enter the max value of the wished dat
 succesfully_sorted_message: .asciiz "\n Seems that everything is OK... But never trust a running system. There MUST be a bug! :D"
 print_initiaton_message: .asciiz "\n Your sorted array is:\n"
 
+#debug error messages
+error_message_one: .asciiz " Your at position 1\n\n"
+error_message_two: .asciiz "Your at position 2\n\n"
+error_message_three: .asciiz "Your at position 3\n\n"
+error_message_four: .asciiz " Your at position 4\n\n"
+error_message_five: .asciiz " Your at position 5\n\n"
+error_message_six: .asciiz " Your at position 6\n\n"
+error_message_seven: .asciiz " Your at position 7\n\n"
+
 #error messages
 error_message_message: .asciiz "\nError: Your min and max value are either in wrong order or they are the same. Please try it again.\n\n"
 error_negative_amount_message: .asciiz "\n You tried to get a negative amount. We're not magicians. Try it again."
@@ -40,10 +49,13 @@ recursive_merge:
 
 	bge $s1, $s2, exit_split				# If lo >= hi then stop splitting
 #Calculation of mid
-	add $s4, $a1, $a2						# $s4 = lo + hi
+	add $s4, $s1, $s2						# $s4 = lo + hi
 	srl $s4, $s4, 1							# $s4 = mid = (lo + hi) / 2
-	move $s1, $a2							# save hi in $s1 for recursive calls later
+	#move $s1, $a2							# save hi in $s1 for recursive calls later
+	move $a0, $s0
+	move $a1, $s1
 	move $a2, $s4							# $a2 = new mid
+	move $a3, $s3
 	jal recursive_merge
 
 	addi $t0, $s4, 1						# $t0 = mid = mid + 1
@@ -118,6 +130,9 @@ merge_first_loop:
 	move $a3, $s6							# $a3 = k
 
 	jal swap_array_content
+	la $a0, error_message_one				# Load input message for the max value
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
 
 	addi $s6, $s6, 1						# $s6 = k + 1
 	j merge_first_loop						# go back to loop beginning
@@ -139,6 +154,9 @@ first_lvl_if:
 	move $a3, $s5							# $a3 = j
 
 	jal swap_array_content
+	la $a0, error_message_two				# Load input message for the max value
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
 
 	addi $s5, $s5, 1 						# $s5 = j = j++
 	move $a3, $s5							# $a3 = j
@@ -157,6 +175,9 @@ second_lvl_if:
 	move $a3, $s7							# $a3 = i
 
 	jal swap_array_content
+	la $a0, error_message_three				# Load input message for the max value
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
 	addi $s7, $s7, 1 						# $s7 = i = i++
 
 	addi $s6, $s6, 1						# $s6 = k + 1
@@ -164,15 +185,15 @@ second_lvl_if:
 
 second_lvl_else:
 	sll $t0, $s6, 2 						# $t0 = j * 4
-	sll $t1, $a3, 20						# $t1 = i * 4
+	sll $t1, $a3, 2						# $t1 = i * 4
 	add $t0, $a1, $t0 						# $t0 = address of aux[j]
 	add $t1, $a1, $t1						# $t1 = address of aux[i]
 
 	lwc1 $f0, 0($t0)						# $f0 = content of aux[j]
 	lwc1 $f1, 0($t1) 						# $f1 = content of aux[i]
 
-	c.le.s 4 $f1, $f0
-	bc1t 4 third_lvl_else			# if aux[i] <= aux[j] goto third_lvl_else
+	c.le.s $f1, $f0
+	bc1t third_lvl_else						# if aux[i] <= aux[j] goto third_lvl_else
 	j third_lvl_if
 
 third_lvl_if:
@@ -182,6 +203,9 @@ third_lvl_if:
 	move $a3, $s5							# $a3 = j
 
 	jal swap_array_content
+	la $a0, error_message_four				# Load input message for the max value
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
 	addi $s5, $s5, 1 						# $s5 = j = j++
 
 	addi $s6, $s6, 1						# $s6 = k + 1
@@ -194,6 +218,9 @@ third_lvl_else:
 	move $a3, $s7							# $a3 = i
 
 	jal swap_array_content
+	la $a0, error_message_five				# Load input message for the max value
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
 	addi $s7, $s7, 1 						# $s7 = i = i++
 
 	addi $s6, $s6, 1						# $s6 = k + 1
@@ -261,7 +288,6 @@ fsort:
 	move $a3, $s0							# $a3 = start address of target heap
 
 	jal recursive_merge
-	#TBD: Print
 
 	sub $t2, $s0, $fp						# calculate negative difference between heap end and start of aux
 	add $fp, $fp, $t2						# reset fp to correct stack address
