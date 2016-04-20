@@ -6,6 +6,7 @@ n_input_message: .asciiz "\nPlease enter here the amount of numbers that should 
 min_value_input_message: .asciiz "\nPlease enter the min value of the wished data range:"
 max_value_input_message: .asciiz "\nPlease enter the max value of the wished data range:"
 succesfully_sorted_message: .asciiz "\n Seems that everything is OK... But never trust a running system. There MUST be a bug! :D"
+print_initiaton_message: .asciiz "\n Your sorted array is:\n"
 
 #error messages
 error_message_message: .asciiz "\nError: Your min and max value are either in wrong order or they are the same. Please try it again.\n\n"
@@ -46,10 +47,9 @@ recursive_merge:
 	jal recursive_merge
 
 	addi $t0, $s4, 1						# $t0 = mid = mid + 1
-	####TO BE DONE TBD why is $t0 overwriting our merge function?
- # added two move functions since first merge may overwrite a0 etc..
+	
 	move $a0, $s0								# restore array a
-	move $a1, $t0 							# $a1 = mid + 1
+	move $a1, $t0 								# $a1 = mid + 1
 	move $a2, $s2								# $a2 = hi
 	move $a3, $s3								#restore array aux 
 	jal recursive_merge
@@ -167,10 +167,12 @@ second_lvl_else:
 	sll $t1, $a3, 20						# $t1 = i * 4
 	add $t0, $a1, $t0 						# $t0 = address of aux[j]
 	add $t1, $a1, $t1						# $t1 = address of aux[i]
-	lw $t0, 0($t0)							# $t0 = content of aux[j]
-	lw $t1, 0($t1) 							# $t1 = content of aux[i]
 
-	bge $t0, $t1, third_lvl_else			# if aux[j] >= aux[i] goto third_lvl_else
+	lwc1 $f0, 0($t0)						# $f0 = content of aux[j]
+	lwc1 $f1, 0($t1) 						# $f1 = content of aux[i]
+
+	c.le.s 4 $f1, $f0
+	bc1t 4 third_lvl_else			# if aux[i] <= aux[j] goto third_lvl_else
 	j third_lvl_if
 
 third_lvl_if:
@@ -226,6 +228,14 @@ swap_array_content:
 	addu $t3, $a1, $t1						# $t3 = address of aux[j]
 	lw $t4, 0($t3)							# $t4 = content of aux[j]
 	sw $t4, 0($t2)							# a[k] = aux[j]
+	#Debug...
+	lwc1 $f12, 0($t2)						# save floating point number in $f12
+
+	li $v0, 2 								# print_float for syscall
+	syscall
+	la $a0, line_break						# Load input message for the max value
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
 
 	lw $ra, 0($sp)							# load jump back address from stack
 	addi $sp, $sp, 4						# free memory from stack
@@ -378,8 +388,9 @@ generate_list_loop:
 	addi $s0, $s0, -1  						#decrement loop invariant by 1
 	move $a0, $s1							# set min_value for subroutine on $a0
 	move $a1, $s2 							# set max_value for subroutine on $a1
+	
 	jal generate_list_item
-	#TBD: Save on heap
+	
 	mov.s $f12, $f0   						# move $f0 to $f12 for syscall
 	swc1 $f0, 0($fp)						# save item at current position of heap
 	addi $fp, $fp, 4
@@ -398,6 +409,46 @@ exit_generate_list_loop:
 	lw $s0, 0($sp)							# restore $s0 from stack
 	addi $sp, $sp, 16
 	jr $ra
+	
+print_sorted_array:
+#$a0 = a, $a1 = n
+	addi $sp,$sp, -16						# reserve space on stack
+	sw $ra, 12($sp)							# save $ra on stack
+	sw $s2, 8($sp)
+	sw $s1, 4($sp)
+	sw $s0, 0($sp)							# save $s0 on stack
+	
+	move $s2, $zero 						# $s2 = 0
+	move $s1, $a1 							# $s1 = n
+	move $s0, $a0							# $s0 = a
+	j print_loop
+
+print_loop:
+	bge $s2, $s1, exit_print_loop			# if temp. counter variable >= n goto exit
+	
+	sll $t0, $s2, 2 						# offset = temp * 4
+	add $t1, $s0, $t0						# address of entry = a + offset
+	
+	lwc1 $f12, 0($t1)						# save floating point number in $f12
+
+	li $v0, 2 								# print_float for syscall
+	syscall
+	la $a0, line_break						# Load input message for the max value
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
+	
+	addi $s2, 1
+	j print_loop
+
+exit_print_loop:
+	sw $ra, 12($sp)							# Restore $ra from stack
+	sw $s2, 8($sp)							# Restore $s2 from stack
+	sw $s1, 4($sp)							# Restore $s1 from stack
+	sw $s0, 0($sp)							# Restore $s0 from stack
+	addi $sp,$sp, 16
+	
+	jr $ra
+	
 
 main:
 	lw $s0, const_m 						# $s0 = 2^31 maximal number we support
@@ -447,6 +498,16 @@ main:
 	move $a0, $s1 							# $a0 = start address of heap
 	move $a1, $s2							# Restore n from $s2
 	jal fsort								# Call fsort
+	
+	
+	
+	la $a0, print_initiaton_message			# Load input message for print_initiaton_message
+	li $v0, 4								# Load I/O code to print string to console
+	syscall	
+
+	move $a0, $s1							# $a0 = a
+	move $a1, $s2							# $a1 = n
+	jal print_sorted_array
 
 	la $a0, succesfully_sorted_message		# Load successfull message for the max value
 	li $v0, 4								# Load I/O code to print string to console
