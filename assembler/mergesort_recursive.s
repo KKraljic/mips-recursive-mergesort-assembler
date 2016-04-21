@@ -8,15 +8,6 @@ max_value_input_message: .asciiz "\nPlease enter the max value of the wished dat
 succesfully_sorted_message: .asciiz "\n Seems that everything is OK... But never trust a running system. There MUST be a bug! :D"
 print_initiaton_message: .asciiz "\n Your sorted array is:\n"
 
-#debug error messages
-error_message_one: .asciiz " Your at position 1\n\n"
-error_message_two: .asciiz "Your at position 2\n\n"
-error_message_three: .asciiz "Your at position 3\n\n"
-error_message_four: .asciiz " Your at position 4\n\n"
-error_message_five: .asciiz " Your at position 5\n\n"
-error_message_six: .asciiz " Your at position 6\n\n"
-error_message_seven: .asciiz " Your at position 7\n\n"
-
 #error messages
 error_message_message: .asciiz "\nError: Your min and max value are either in wrong order or they are the same. Please try it again.\n\n"
 error_negative_amount_message: .asciiz "\n You tried to get a negative amount. We're not magicians. Try it again."
@@ -51,7 +42,6 @@ recursive_merge:
 #Calculation of mid
 	add $s4, $s1, $s2						# $s4 = lo + hi
 	srl $s4, $s4, 1							# $s4 = mid = (lo + hi) / 2
-	#move $s1, $a2							# save hi in $s1 for recursive calls later
 	move $a0, $s0
 	move $a1, $s1
 	move $a2, $s4							# $a2 = new mid
@@ -265,15 +255,9 @@ fsort:
 	move $a1, $zero 						# $a1 = 0
 	addi $a2, $t1, -1						# $a2 = n = n-1
 	move $a3, $s0							# $a3 = start address of target heap
-
+	
 	jal recursive_merge
-
-	sub $t2, $s0, $fp						# calculate negative difference between heap end and start of aux
-	add $fp, $fp, $t2						# reset fp to correct stack address
-	move $a0, $t2							# pass the bytes to free the heap
-	li $v0, 9								# Syscall to free memory on heap
-	syscall 								# free heap by $fp - aux
-
+	
 	lw $ra, 4($sp)							# Restore jump back address from stack
 	lw $s0, 0($sp)							# Restore $s0 from stack
 	addi $sp, $sp, 8						# Free space from stack
@@ -308,10 +292,13 @@ error_exceeded_range:
 # number of list items in $a0
 # seed initializes an initial random r by multiplying $sp with n
 seed:
-# generate random r
-	multu $sp, $a0   						# random_addr * n
+# generate random x
+	mfc0 $t1, $9							# $t1 = execution time	
+	multu $sp, $t1   						# random_addr * n
 	mflo $t0        						# random_number = random_addr * n
-# end absolute value, in $t1 -1 after operation
+	divu $t0, $a0
+	mflo $t0
+
 	la $t1, x        						# load address of global value x
 	sw $t0, 0($t1)  						# x = random_number
 	jr $ra          						# jump back to caller
@@ -323,58 +310,42 @@ rand:
 	sw $s3, 12($sp)
 	sw $s2, 8($sp)
 	sw $s1, 4($sp)
-	sw $s0, 0($sp)			
-# load all constants
-	lw $s0, const_a  						# $s0 = const_a 
-	lw $s1, const_b  						# $s1 = const_b  
-	lw $s2, const_m  						# $s2 = const_m  
-	lw $s3, x  								# $s3 = x
-	li.d $f4, 698769069.0					# $f4 = 698769069
+	sw $s0, 0($sp)	
 	
-# Initialize variables...
-	li.s $f5, 362436000.0					# $f5 = y
-	li.s $f6, 521288629.0					# $f6 = z
-	li.s $f7, 7654321.0						# $f7 = c
+# load all constants
+	lw $s0, x								# $s0 = x
+	li $s1, 69069 						# $s3 = a 
+	lw $s2, const_m
+	li $s3, 12345
+	
+	li $t0, 181218000						# $t0 = y
+	li $t1, 260644315						# $t1 = z
+	li $t2, 38271601						# $t2 = c
+	li $t3, 698769069						# $t3 = 698769069
 	
 # Calculate linear congruential generator
+	multu $s0, $s1 							# $s0 = (a * x)
+	mflo $t1
+	addu $s0, $t1, $s3 						# $s0 = x = (a * x) + b
+
+#Xorshift
+	sll $t4, $t0, 13 
+	xor $t0, $t0, $t4
+	sll $t4, $t0, 17
+	xor $t0, $t0, $t4
+	sll $t4, $t0, 5
+	xor $t0, $t0, $t4
 	
-	multu $s0, $s3 							# $t5 = (a * x)
-	mflo $t0
-	addu $s0, $t0, $s1 						# $s0 = x = (a * x) + b
-	mtc1 $s0, $f9
-	cvt.s.w $f9, $f9						# x = (a * r) + b + 0.0
+#Multiply-with-carry
+	multu $t3, $t1							# 698769069 * z
+	mfhi $t5								# $t5 = c = t >> 32
+	addu $t2, $t5, $t2						# $t2 = 698769069 * z + c
 	
-#Xor Shifting TBD: not loose any stellen
-	mfc1 $t0, $f5
-	sll $t1, $t0, 12						# $t1 = y << 8
-	xor $t0, $t1, $t0						# $t0 = y ^= y << 8
-	srl $t1, $t0, 16						# $t1 = y >> 16
-	xor $t0, $t1, $t0						# $t0 = y ^= y >> 16
-	sll $t1, $t0, 4							# $t1 = y << 4
-	xor $t0, $t1, $t0						# $t0 = y ^= y << 4
-	mtc1 $t0, $f5							# $f5 = y
-	
-	mov.s $f10, $f7 						# store c in even register
-	mul.d $f8, $f4, $f6						# $f8 = t = 698769069ULL * z
-	add.d $f8, $f8, $f10					# $f8 = t = 698769069ULL * z + c
-#Xor Shifting TBD: not loose any stellen	
-	mfc1 $t0, $f8
-	srl $t0, $t0, 31						# $t0 = t >> 32
-	mtc1 $t0, $f8							# $f8 = c = t >> 32
-	
-	add.s $f9, $f9, $f5 					# $f9 = x + y
-	add.s $f9, $f9, $f6						# $f9 = x + y + z	
-	
-#Get value in wished range...	
-	mtc1 $s2, $f16
-	cvt.s.w $f16, $f16
-	div.s $f9, $f9, $f16     						# ((a * r) + b) / m --> lo = quotient, hi = reminder
-	trunc.w.s $f16, $f0
-	cvt.s.w $f16, $f16      						
-	sub.s $f0, $f0, $f16
-	
-	s.s $f0, x
-	
+	addu $s0, $s0, $t0 						# $s0 = x + y
+	addu $s0, $s0, $t2
+	divu $s0, $s2     						# ((a * r) + b) / m --> lo = quotient, hi = reminder
+	mfhi $v0        						# ((a * r) + b) % m in $v0, since reminder in hi
+	sw $v0, x   	
 	
 	lw $ra, 20($sp)
 	lw $s4, 16($sp)
@@ -387,20 +358,18 @@ rand:
 	jr $ra          						# jump back to caller
 
 frand:
-	addi $sp, $sp, -8
-	sw $ra, 4($sp)
-	sw $s0, 0($sp)
-	
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
 	jal rand								# Jump to rand to get random number between 0 & 2^31 - 1
-	
-	lw $s0, const_max_value					# load content of max_value
-	mtc1 $s0, $f4							# move max_value to coprocessor
-	cvt.s.w $f4, $f4 						# convert max_value from int to single precision float
-	div.s $f0, $f0, $f4						# $f0 = result = random number / max_random
-	
-	lw $ra, 4($sp)
-	lw $s0, 0($sp)
-	addi $sp, $sp, 8
+	lw $t0, const_max_value					# load content of max_value
+	mtc1 $t0, $f4							# move max_value to coprocessor
+	cvt.s.w $f4, $f4 						# convert max_vaue from int to single precision float
+	addi $t0, $v0, 0						# $t0 = random number from rand function
+	mtc1 $t0, $f5							# load random number in coprocessor
+	cvt.s.w $f5, $f5 						# convert random number from integer to floating point
+	div.s $f0, $f5, $f4						# $f0 = result = random number / max_random
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
 	j $ra									# jump back to calling function
 
 
@@ -564,6 +533,9 @@ main:
 	la $a0, succesfully_sorted_message		# Load successfull message for the max value
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
+	
+	
+	
 
 	li $v0, 10								# Load exit code to exit the program cleanly
 	syscall									# perform the syscall

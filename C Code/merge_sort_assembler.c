@@ -6,15 +6,15 @@ void seed(uint32_t r){
 	//Initializes random generator; r is start value
 }
 
-uint32_t rand(int seed){
+uint32_t rand(){
 	//Source:
    uint64_t t;
-   uint32_t x = seed;
-   uint32_t y = 362436000;
-   uint32_t z = 521288629;
-   uint32_t c = 7654321;
+   uint32_t x = random_integer_value;
+   uint32_t y = 181218000;
+   uint32_t z = 260644314,5;
+   uint32_t c = 3827160,5;
    // Linear congruential generator
-   x = 1103515245 * x + 12345;
+   x = 69069 * x + 12345;
 
    // Xorshift
    y ^= y << 13;
@@ -22,7 +22,7 @@ uint32_t rand(int seed){
    y ^= y << 5;
 
    // Multiply-with-carry
-   t = 698769069ULL * z + c; //ULL ^= Unsigned Long Long
+   t = 349384534 * z + c; //Not using the ULL variant due to simplification reasons
    c = t >> 32;
    z = (uint32_t) t;
 
