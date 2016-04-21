@@ -1,4 +1,6 @@
 .data
+#file strings
+fout:   .asciiz "mergesort_recursive_output.txt"     
 
 #informational strings
 line_break: .asciiz "\n"
@@ -19,6 +21,7 @@ const_a: .word 1103515245 					# init a, value for 32bit CPU
 const_b: .word 12345 						# init b
 const_m: .word 2147483648 					# equals 2^(31)
 x: .space 4
+buffer: .space 4096
 
 .globl main
 .text
@@ -472,6 +475,14 @@ exit_print_loop:
 	
 
 main:
+	li   $v0, 13       						# system call for open file
+	la   $a0, fout     						# output file name
+	li   $a1, 1        						# Open for writing (flags are 0: read, 1: write)
+	li   $a2, 0        						# mode is ignored
+	syscall            						# open a file (file descriptor returned in $v0)
+	move $s6, $v0      						# save the file descriptor  
+	
+	
 	lw $s0, const_m 						# $s0 = 2^31 maximal number we support
 	la $a0, n_input_message					# Load input message for n
 	li $v0, 4								# Load I/O code to print string to console
@@ -534,8 +545,9 @@ main:
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
 	
-	
-	
+	li   $v0, 16       						# system call for close file
+	move $a0, $s6      						# file descriptor to close
+	syscall            						# close file	
 
 	li $v0, 10								# Load exit code to exit the program cleanly
 	syscall									# perform the syscall
