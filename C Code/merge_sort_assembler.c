@@ -1,15 +1,32 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 void seed(uint32_t r){
 	//Initializes random generator; r is start value
 }
 
 uint32_t rand(){
-	uint32_t random_number;
-	random_number = 0;
-	//Generates positive integers between 0 and 2^(31)-1 as random number
-	return random_number
+	//Source:
+   uint64_t t;
+   uint32_t x = random_integer_value;
+   uint32_t y = 181218000;
+   uint32_t z = 260644314,5;
+   uint32_t c = 3827160,5;
+   // Linear congruential generator
+   x = 69069 * x + 12345;
+
+   // Xorshift
+   y ^= y << 13;
+   y ^= y >> 17;
+   y ^= y << 5;
+
+   // Multiply-with-carry
+   t = 349384534 * z + c; //Not using the ULL variant due to simplification reasons
+   c = t >> 32;
+   z = (uint32_t) t;
+
+   return x + y + z;
 }
 
 float frand(){

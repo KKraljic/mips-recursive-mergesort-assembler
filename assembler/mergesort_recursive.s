@@ -8,15 +8,6 @@ max_value_input_message: .asciiz "\nPlease enter the max value of the wished dat
 succesfully_sorted_message: .asciiz "\n Seems that everything is OK... But never trust a running system. There MUST be a bug! :D"
 print_initiaton_message: .asciiz "\n Your sorted array is:\n"
 
-#debug error messages
-error_message_one: .asciiz " Your at position 1\n\n"
-error_message_two: .asciiz "Your at position 2\n\n"
-error_message_three: .asciiz "Your at position 3\n\n"
-error_message_four: .asciiz " Your at position 4\n\n"
-error_message_five: .asciiz " Your at position 5\n\n"
-error_message_six: .asciiz " Your at position 6\n\n"
-error_message_seven: .asciiz " Your at position 7\n\n"
-
 #error messages
 error_message_message: .asciiz "\nError: Your min and max value are either in wrong order or they are the same. Please try it again.\n\n"
 error_negative_amount_message: .asciiz "\n You tried to get a negative amount. We're not magicians. Try it again."
@@ -27,7 +18,7 @@ const_max_value: .word 2147483647			# max_value = 2^31 -1
 const_a: .word 1103515245 					# init a, value for 32bit CPU
 const_b: .word 12345 						# init b
 const_m: .word 2147483648 					# equals 2^(31)
-r: .space 4
+x: .space 4
 
 .globl main
 .text
@@ -51,7 +42,6 @@ recursive_merge:
 #Calculation of mid
 	add $s4, $s1, $s2						# $s4 = lo + hi
 	srl $s4, $s4, 1							# $s4 = mid = (lo + hi) / 2
-	#move $s1, $a2							# save hi in $s1 for recursive calls later
 	move $a0, $s0
 	move $a1, $s1
 	move $a2, $s4							# $a2 = new mid
@@ -129,10 +119,7 @@ merge_first_loop:
 	move $a2, $s6							# $a2 = k
 	move $a3, $s6							# $a3 = k
 
-	jal swap_array_content
-	la $a0, error_message_one				# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
+	jal assign_array_content
 
 	addi $s6, $s6, 1						# $s6 = k + 1
 	j merge_first_loop						# go back to loop beginning
@@ -153,10 +140,7 @@ first_lvl_if:
 	move $a2, $s6							# $a2 = k
 	move $a3, $s5							# $a3 = j
 
-	jal swap_array_content
-	la $a0, error_message_two				# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
+	jal assign_array_content
 
 	addi $s5, $s5, 1 						# $s5 = j = j++
 
@@ -173,10 +157,8 @@ second_lvl_if:
 	move $a2, $s6							# $a2 = k
 	move $a3, $s7							# $a3 = i
 
-	jal swap_array_content
-	la $a0, error_message_three				# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
+	jal assign_array_content
+	
 	addi $s7, $s7, 1 						# $s7 = i = i++
 
 	addi $s6, $s6, 1						# $s6 = k + 1
@@ -201,10 +183,8 @@ third_lvl_if:
 	move $a2, $s6							# $a2 = k
 	move $a3, $s5							# $a3 = j
 
-	jal swap_array_content
-	la $a0, error_message_four				# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
+	jal assign_array_content
+	
 	addi $s5, $s5, 1 						# $s5 = j = j++
 
 	addi $s6, $s6, 1						# $s6 = k + 1
@@ -216,13 +196,11 @@ third_lvl_else:
 	move $a2, $s6							# $a2 = k
 	move $a3, $s7							# $a3 = i
 
-	jal swap_array_content
-	la $a0, error_message_five				# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
+	jal assign_array_content
+	
 	addi $s7, $s7, 1 						# $s7 = i = i++
-
 	addi $s6, $s6, 1						# $s6 = k + 1
+	
 	j merge_second_loop						# go back to loop beginning
 
 exit_second_loop:
@@ -243,7 +221,7 @@ exit_second_loop:
 
 
 
-swap_array_content:
+assign_array_content:
 # $a0 = a ; $a1 = aux; $a2 = k ; $a3 = j;
 	addi $sp, $sp, -4						# reserve memory on stack
 	sw $ra, 0($sp)							# save $ra on stack
@@ -254,15 +232,7 @@ swap_array_content:
 	addu $t3, $a1, $t1						# $t3 = address of aux[j]
 	lw $t4, 0($t3)							# $t4 = content of aux[j]
 	sw $t4, 0($t2)							# a[k] = aux[j]
-	#Debug...
-	lwc1 $f12, 0($t2)						# save floating point number in $f12
-
-	li $v0, 2 								# print_float for syscall
-	syscall
-	la $a0, line_break						# Load input message for the max value
-	li $v0, 4								# Load I/O code to print string to console
-	syscall									# print string
-
+	
 	lw $ra, 0($sp)							# load jump back address from stack
 	addi $sp, $sp, 4						# free memory from stack
 	jr $ra
@@ -285,15 +255,9 @@ fsort:
 	move $a1, $zero 						# $a1 = 0
 	addi $a2, $t1, -1						# $a2 = n = n-1
 	move $a3, $s0							# $a3 = start address of target heap
-
+	
 	jal recursive_merge
-
-	sub $t2, $s0, $fp						# calculate negative difference between heap end and start of aux
-	add $fp, $fp, $t2						# reset fp to correct stack address
-	move $a0, $t2							# pass the bytes to free the heap
-	li $v0, 9								# Syscall to free memory on heap
-	syscall 								# free heap by $fp - aux
-
+	
 	lw $ra, 4($sp)							# Restore jump back address from stack
 	lw $s0, 0($sp)							# Restore $s0 from stack
 	addi $sp, $sp, 8						# Free space from stack
@@ -328,37 +292,69 @@ error_exceeded_range:
 # number of list items in $a0
 # seed initializes an initial random r by multiplying $sp with n
 seed:
-# generate random r
-	multu $sp, $a0   						# random_addr * n
+# generate random x
+	mfc0 $t1, $9							# $t1 = execution time	
+	multu $sp, $t1   						# random_addr * n
 	mflo $t0        						# random_number = random_addr * n
-# input and output in $t0 - absolute value
-	sra $t1, $t0, 31
-	xor $t0, $t0, $t1
-	sub $t0, $t0, $t1
-# end absolute value, in $t1 -1 after operation
-	la $t1, r        						# laod address of global value r
-	sw $t0, 0($t1)  						# r = random_number
+	divu $t0, $a0
+	mflo $t0
+
+	la $t1, x        						# load address of global value x
+	sw $t0, 0($t1)  						# x = random_number
 	jr $ra          						# jump back to caller
 
 rand:
-# laod all constants
-	lw $t1, const_a  						# load value of const_a into register
-	lw $t2, const_b  						# load value of const_b into register
-	lw $t3, const_m  						# load value of const_m into register
-# calculate the random number $t1 = a, $t2 = b, $t3 = m
-	lw $t4, r  								# load r, $t4 = r
-	multu $t1, $t4 							# (a * r) in $t5
-	mflo $t5
-# convert to absolute value
-# input and output in $t5 - absolute value
-	sra $t1, $t5,31
-	xor $t5, $t5, $t1
-	sub $t5, $t5, $t1
-# end absolute value, in $t1 -1 after operation
-	addu $t6, $t5, $t2 						# (a * r) + b in $t6
-	div $t6, $t3     						# ((a * r) + b) / m lo = quotient, hi = reminder
-	mfhi $v0        						#  ((a * r) + b) % m in $v0, since reminder in hi
-	sw $v0, r      							# save the new r value in global section
+	addi $sp, $sp, -24
+	sw $ra, 20($sp)
+	sw $s4, 16($sp)
+	sw $s3, 12($sp)
+	sw $s2, 8($sp)
+	sw $s1, 4($sp)
+	sw $s0, 0($sp)	
+	
+# load all constants
+	lw $s0, x								# $s0 = x
+	li $s1, 69069 						# $s3 = a 
+	lw $s2, const_m
+	li $s3, 12345
+	
+	li $t0, 181218000						# $t0 = y
+	li $t1, 260644315						# $t1 = z
+	li $t2, 38271601						# $t2 = c
+	li $t3, 698769069						# $t3 = 698769069
+	
+# Calculate linear congruential generator
+	multu $s0, $s1 							# $s0 = (a * x)
+	mflo $t1
+	addu $s0, $t1, $s3 						# $s0 = x = (a * x) + b
+
+#Xorshift
+	sll $t4, $t0, 13 
+	xor $t0, $t0, $t4
+	sll $t4, $t0, 17
+	xor $t0, $t0, $t4
+	sll $t4, $t0, 5
+	xor $t0, $t0, $t4
+	
+#Multiply-with-carry
+	multu $t3, $t1							# 698769069 * z
+	mfhi $t5								# $t5 = c = t >> 32
+	addu $t2, $t5, $t2						# $t2 = 698769069 * z + c
+	
+	addu $s0, $s0, $t0 						# $s0 = x + y
+	addu $s0, $s0, $t2
+	divu $s0, $s2     						# ((a * r) + b) / m --> lo = quotient, hi = reminder
+	mfhi $v0        						# ((a * r) + b) % m in $v0, since reminder in hi
+	sw $v0, x   	
+	
+	lw $ra, 20($sp)
+	lw $s4, 16($sp)
+	lw $s3, 12($sp)
+	lw $s2, 8($sp)
+	lw $s1, 4($sp)
+	lw $s0, 0($sp)
+	addi $sp, $sp, 24	
+	
 	jr $ra          						# jump back to caller
 
 frand:
@@ -384,7 +380,7 @@ generate_list_item:							#TBD: In die MAIN packen?
 	sw $ra, 0($sp)
 
 	mtc1 $a0, $f12							# move min_value to coprocessor
-	cvt.s.w $f12, $f12 						# convert min_vaue from int to single precision float
+	cvt.s.w $f12, $f12 						# convert min_value from int to single precision float
 	mtc1 $a1, $f13							# move max_value to coprocessor
 	cvt.s.w $f13, $f13 						# convert max_vaue from int to single precision float
 
@@ -537,6 +533,9 @@ main:
 	la $a0, succesfully_sorted_message		# Load successfull message for the max value
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
+	
+	
+	
 
 	li $v0, 10								# Load exit code to exit the program cleanly
 	syscall									# perform the syscall
