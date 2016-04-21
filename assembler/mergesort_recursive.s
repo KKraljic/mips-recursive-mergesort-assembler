@@ -27,7 +27,7 @@ const_max_value: .word 2147483647			# max_value = 2^31 -1
 const_a: .word 1103515245 					# init a, value for 32bit CPU
 const_b: .word 12345 						# init b
 const_m: .word 2147483648 					# equals 2^(31)
-r: .space 4
+x: .space 4
 
 .globl main
 .text
@@ -129,7 +129,7 @@ merge_first_loop:
 	move $a2, $s6							# $a2 = k
 	move $a3, $s6							# $a3 = k
 
-	jal swap_array_content
+	jal assign_array_content
 
 	addi $s6, $s6, 1						# $s6 = k + 1
 	j merge_first_loop						# go back to loop beginning
@@ -150,7 +150,7 @@ first_lvl_if:
 	move $a2, $s6							# $a2 = k
 	move $a3, $s5							# $a3 = j
 
-	jal swap_array_content
+	jal assign_array_content
 
 	addi $s5, $s5, 1 						# $s5 = j = j++
 
@@ -167,7 +167,7 @@ second_lvl_if:
 	move $a2, $s6							# $a2 = k
 	move $a3, $s7							# $a3 = i
 
-	jal swap_array_content
+	jal assign_array_content
 	
 	addi $s7, $s7, 1 						# $s7 = i = i++
 
@@ -193,7 +193,7 @@ third_lvl_if:
 	move $a2, $s6							# $a2 = k
 	move $a3, $s5							# $a3 = j
 
-	jal swap_array_content
+	jal assign_array_content
 	
 	addi $s5, $s5, 1 						# $s5 = j = j++
 
@@ -206,7 +206,7 @@ third_lvl_else:
 	move $a2, $s6							# $a2 = k
 	move $a3, $s7							# $a3 = i
 
-	jal swap_array_content
+	jal assign_array_content
 	
 	addi $s7, $s7, 1 						# $s7 = i = i++
 	addi $s6, $s6, 1						# $s6 = k + 1
@@ -231,7 +231,7 @@ exit_second_loop:
 
 
 
-swap_array_content:
+assign_array_content:
 # $a0 = a ; $a1 = aux; $a2 = k ; $a3 = j;
 	addi $sp, $sp, -4						# reserve memory on stack
 	sw $ra, 0($sp)							# save $ra on stack
@@ -311,49 +311,96 @@ seed:
 # generate random r
 	multu $sp, $a0   						# random_addr * n
 	mflo $t0        						# random_number = random_addr * n
-# input and output in $t0 - absolute value
-	sra $t1, $t0, 31
-	xor $t0, $t0, $t1
-	sub $t0, $t0, $t1
 # end absolute value, in $t1 -1 after operation
-	la $t1, r        						# laod address of global value r
-	sw $t0, 0($t1)  						# r = random_number
+	la $t1, x        						# load address of global value x
+	sw $t0, 0($t1)  						# x = random_number
 	jr $ra          						# jump back to caller
 
 rand:
-# laod all constants
-	lw $t1, const_a  						# load value of const_a into register
-	lw $t2, const_b  						# load value of const_b into register
-	lw $t3, const_m  						# load value of const_m into register
-# calculate the random number $t1 = a, $t2 = b, $t3 = m
-	lw $t4, r  								# load r, $t4 = r
-	multu $t1, $t4 							# (a * r) in $t5
-	mflo $t5
-# convert to absolute value
-# input and output in $t5 - absolute value
-	sra $t1, $t5,31
-	xor $t5, $t5, $t1
-	sub $t5, $t5, $t1
-# end absolute value, in $t1 -1 after operation
-	addu $t6, $t5, $t2 						# (a * r) + b in $t6
-	div $t6, $t3     						# ((a * r) + b) / m lo = quotient, hi = reminder
-	mfhi $v0        						#  ((a * r) + b) % m in $v0, since reminder in hi
-	sw $v0, r      							# save the new r value in global section
+	addi $sp, $sp, -24
+	sw $ra, 20($sp)
+	sw $s4, 16($sp)
+	sw $s3, 12($sp)
+	sw $s2, 8($sp)
+	sw $s1, 4($sp)
+	sw $s0, 0($sp)			
+# load all constants
+	lw $s0, const_a  						# $s0 = const_a 
+	lw $s1, const_b  						# $s1 = const_b  
+	lw $s2, const_m  						# $s2 = const_m  
+	lw $s3, x  								# $s3 = x
+	li.d $f4, 698769069.0					# $f4 = 698769069
+	
+# Initialize variables...
+	li.s $f5, 362436000.0					# $f5 = y
+	li.s $f6, 521288629.0					# $f6 = z
+	li.s $f7, 7654321.0						# $f7 = c
+	
+# Calculate linear congruential generator
+	
+	multu $s0, $s3 							# $t5 = (a * x)
+	mflo $t0
+	addu $s0, $t0, $s1 						# $s0 = x = (a * x) + b
+	mtc1 $s0, $f9
+	cvt.s.w $f9, $f9						# x = (a * r) + b + 0.0
+	
+#Xor Shifting TBD: not loose any stellen
+	mfc1 $t0, $f5
+	sll $t1, $t0, 12						# $t1 = y << 8
+	xor $t0, $t1, $t0						# $t0 = y ^= y << 8
+	srl $t1, $t0, 16						# $t1 = y >> 16
+	xor $t0, $t1, $t0						# $t0 = y ^= y >> 16
+	sll $t1, $t0, 4							# $t1 = y << 4
+	xor $t0, $t1, $t0						# $t0 = y ^= y << 4
+	mtc1 $t0, $f5							# $f5 = y
+	
+	mov.s $f10, $f7 						# store c in even register
+	mul.d $f8, $f4, $f6						# $f8 = t = 698769069ULL * z
+	add.d $f8, $f8, $f10					# $f8 = t = 698769069ULL * z + c
+#Xor Shifting TBD: not loose any stellen	
+	mfc1 $t0, $f8
+	srl $t0, $t0, 31						# $t0 = t >> 32
+	mtc1 $t0, $f8							# $f8 = c = t >> 32
+	
+	add.s $f9, $f9, $f5 					# $f9 = x + y
+	add.s $f9, $f9, $f6						# $f9 = x + y + z	
+	
+#Get value in wished range...	
+	mtc1 $s2, $f16
+	cvt.s.w $f16, $f16
+	div.s $f9, $f9, $f16     						# ((a * r) + b) / m --> lo = quotient, hi = reminder
+	trunc.w.s $f16, $f0
+	cvt.s.w $f16, $f16      						
+	sub.s $f0, $f0, $f16
+	
+	s.s $f0, x
+	
+	
+	lw $ra, 20($sp)
+	lw $s4, 16($sp)
+	lw $s3, 12($sp)
+	lw $s2, 8($sp)
+	lw $s1, 4($sp)
+	lw $s0, 0($sp)
+	addi $sp, $sp, 24	
+	
 	jr $ra          						# jump back to caller
 
 frand:
-	addi $sp, $sp, -4
-	sw $ra, 0($sp)
+	addi $sp, $sp, -8
+	sw $ra, 4($sp)
+	sw $s0, 0($sp)
+	
 	jal rand								# Jump to rand to get random number between 0 & 2^31 - 1
-	lw $t0, const_max_value					# load content of max_value
-	mtc1 $t0, $f4							# move max_value to coprocessor
-	cvt.s.w $f4, $f4 						# convert max_vaue from int to single precision float
-	addi $t0, $v0, 0						# $t0 = random number from rand function
-	mtc1 $t0, $f5							# load random number in coprocessor
-	cvt.s.w $f5, $f5 						# convert random number from integer to floating point
-	div.s $f0, $f5, $f4						# $f0 = result = random number / max_random
-	lw $ra, 0($sp)
-	addi $sp, $sp, 4
+	
+	lw $s0, const_max_value					# load content of max_value
+	mtc1 $s0, $f4							# move max_value to coprocessor
+	cvt.s.w $f4, $f4 						# convert max_value from int to single precision float
+	div.s $f0, $f0, $f4						# $f0 = result = random number / max_random
+	
+	lw $ra, 4($sp)
+	lw $s0, 0($sp)
+	addi $sp, $sp, 8
 	j $ra									# jump back to calling function
 
 
@@ -364,7 +411,7 @@ generate_list_item:							#TBD: In die MAIN packen?
 	sw $ra, 0($sp)
 
 	mtc1 $a0, $f12							# move min_value to coprocessor
-	cvt.s.w $f12, $f12 						# convert min_vaue from int to single precision float
+	cvt.s.w $f12, $f12 						# convert min_value from int to single precision float
 	mtc1 $a1, $f13							# move max_value to coprocessor
 	cvt.s.w $f13, $f13 						# convert max_vaue from int to single precision float
 
