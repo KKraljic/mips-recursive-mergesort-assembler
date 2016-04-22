@@ -294,13 +294,13 @@ error_exceeded_range:
 seed:
 # generate random x
 	mfc0 $t1, $9							# $t1 = execution time	
-	multu $sp, $t1   						# random_addr * n
-	mflo $t0        						# random_number = random_addr * n
-	divu $t0, $a0
+	multu $sp, $t1   						# random_addr * execution time
+	mflo $t0        						# random_number = random_addr * execution time
+	divu $t0, $a0                           # random_number / n
 	mflo $t0
 
 	la $t1, x        						# load address of global value x
-	sw $t0, 0($t1)  						# x = random_number
+	sw $t0, 0($t1)  						# x = random_number = random_number / n
 	jr $ra          						# jump back to caller
 
 rand:
@@ -314,7 +314,7 @@ rand:
 	
 # load all constants
 	lw $s0, x								# $s0 = x
-	li $s1, 69069 						# $s3 = a 
+	li $s1, 69069 						    # $s3 = a 
 	lw $s2, const_m
 	li $s3, 12345
 	
@@ -330,11 +330,11 @@ rand:
 
 #Xorshift
 	sll $t4, $t0, 13 
-	xor $t0, $t0, $t4
+	xor $t0, $t0, $t4 # y ^= y << 13;
 	sll $t4, $t0, 17
-	xor $t0, $t0, $t4
+	xor $t0, $t0, $t4 # y ^= y >> 17;
 	sll $t4, $t0, 5
-	xor $t0, $t0, $t4
+	xor $t0, $t0, $t4 # y ^= y << 5;
 	
 #Multiply-with-carry
 	multu $t3, $t1							# 698769069 * z
@@ -343,8 +343,10 @@ rand:
 	
 	addu $s0, $s0, $t0 						# $s0 = x + y
 	addu $s0, $s0, $t2
-	divu $s0, $s2     						# ((a * r) + b) / m --> lo = quotient, hi = reminder
-	mfhi $v0        						# ((a * r) + b) % m in $v0, since reminder in hi
+	
+											# m = const_max_value
+	divu $s0, $s2     						# ((a * x) + b) / m --> lo = quotient, hi = reminder
+	mfhi $v0        						# ((a * x) + b) % m in $v0, since reminder in hi
 	sw $v0, x   	
 	
 	lw $ra, 20($sp)
@@ -374,7 +376,7 @@ frand:
 
 
 
-generate_list_item:							#TBD: In die MAIN packen?
+generate_list_item:							
 #$f0 = random_value; $f12 = min_value; $f13 = max_value
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
@@ -509,7 +511,7 @@ main:
 	move $fp, $s1 							# Set frame pointer to start address of heap
 
 	move $a0, $a1							# move n after all syscalls in $a0 to meet mips
-	jal seed 								# init r value
+	jal seed 								# init x value
 
 	move $a1, $a2							# move min_value to $a0
 	move $a2, $a3							# move max_value to $a1
