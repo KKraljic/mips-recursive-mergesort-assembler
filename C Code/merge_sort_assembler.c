@@ -22,7 +22,7 @@ uint32_t rand(){
    y ^= y << 5;
 
    // Multiply-with-carry
-   t = 349384534 * z + c; //Not using the ULL variant due to simplification reasons
+   t = 698769069 * z + c; //Not using the ULL variant due to simplification reasons
    c = t >> 32;
    z = (uint32_t) t;
 
