@@ -3,93 +3,93 @@
 #include <time.h>
 #include <stdint.h>
 
-// get time - $9 register in mips
-clock_t timeclock;
+time_t start;
+time_t end;
 void start_time()
 {
-    timeclock = clock();
+    start = time(NULL);
 }
-// return time since beginning of program execution
+// return time since beginning of program execution register $9 in MIPS
 int stop_time()
 {
-    timeclock = clock() - timeclock;
-    int time_taken = ( (double) timeclock ) /CLOCKS_PER_SEC;
-    return time_taken;
+    end = time(NULL) - start;
+    return end;
 }
+
 // gloabal variables - constants
-int const_max_value = 2147483647; // 2^31 -1
+uint32_t const_max_value = 2147483647; // 2^31 -1
 int const_a = 1103515245; // init a value for 32 bit CPU
 int const_b = 12345;      // init b
-int const_b = 2147483648; // 2^31
+uint32_t const_m = 2147483648; // 2^31,
 
-int x; 
+uint32_t x;
 
 // random generator functions
-void seed(int n) { // generate random x 
-    int execution_time = stop_time();
+void seed(int n) { // generate random x
+    int execution_time = stop_time() * 3600; //seconds are to small
     int random_addr[1]; // some random address allocation
-    unsigned int random_number = (uintptr_t) random_addr * execution_time;
+    uint32_t random_number = (uintptr_t) random_addr * execution_time;
     x = random_number / n;
 }
+
+
 // conflicting with rand of stdlib
-int rand_1(){
-    
-    int y = 181218000;
-    int z = 260644315;
-    int c = 38271601;
-    
-   // Calculate linear congruential generator
-   x = 69069 * x + const_b; // int a = 69069
-   
-   // Xor Shift
-   y ^= y << 13;
-   y ^= y >> 17;
-   y ^= y << 5;
-   
-   // multiply with carry
-   
-   /* The Assembler implementation might differ in that place
-      to simplify things e.g. no 64 bit calculation.
-   */
-   uint64_t t;
-   t = 698769069ULL * z + c;
-   int c = t >> 32;
-   int z = (uint32_t) t;
-   x = x + y + z;
-   x = x % const_max_value;
-   return x;
+uint32_t rand_1(){
+
+    uint32_t y = 181218000;
+    uint32_t z = 260644315;
+    uint32_t c = 38271601;
+
+    // Calculate linear congruential generator
+    x = 69069 * x + const_b; // int a = 69069
+
+    // Xor Shift
+    y ^= y << 13;
+    y ^= y >> 17;
+    y ^= y << 5;
+
+    // multiply with carry - custom
+
+    /* The Assembler implementation might differ in that place
+       to simplify things e.g. no 64 bit calculation
+    */
+
+    uint64_t t;
+    t = 698769069ULL * z + c;
+    c = t >> 32;
+    z = (uint32_t) t;
+    x = x + y +z;
+
+    x = x % const_m;
+    return x;
 }
+
 // retrun float value 0 > x < 1
 float frand(){
-  unsigned int current_rand = rand_1();
-  float result = (float) current_rand / max_random;
-  return result;
+    unsigned int current_rand = rand_1();
+    float random_number = (float) current_rand / (float) const_max_value;
+    return random_number;
 }
 
-int generate_list_item(int min_value, int max_value){
-    return frand() * (max_value - min_value);
+float generate_list_item(int min_value, int max_value){
+    float random_value = frand();
+    float t = min_value + (random_value * ( max_value - min_value));
+    printf("List item = %f\n",t);
+    return t;
 }
 
-/* a contains the adress on the heap, in ASSEMBLER the $fp register
-   can be used and incremented
- */
-void generate_list(int n, int min, int max, int* a){
-    while(n != 0){
-        n--;
-        *a = generate_list_item( min, max );
-        a++; // increment integer pointer
-        printf("%i\n", *a);
+void generate_list(int n, int min, int max, float a[]){
+    // This can be implemented with heap pointers incrementation in assembler and by decrementing n while n != 0
+    int t = 0;
+    while(t < n){
+        a[t] = generate_list_item( min, max );
+        printf("%f\n",a[t]);
+        t++;
     }
-}
-/* This functions realizes the simple array assignment, assembler should 
-   handle in a subroutine
-*/
-void assign_array_content(int* a, int* aux, int k, int j ){
-    a[k] = aux[j];
 }
 
 // function that merges two sub lists
-void merge(int a[],int lo, int mid, int hi, int aux[])
+void merge(float a[],int lo, int mid, int hi, float aux[])
 {
     int i = lo;
     int j = mid + 1;
@@ -97,39 +97,34 @@ void merge(int a[],int lo, int mid, int hi, int aux[])
     // copy the string to the aux at the exactly same positions
     for(k = lo; k <= hi; k++)
     {
-        assign_array_content(&aux[0], &a[0],k,k);
-        //aux[k] = a[k];
+        aux[k] = a[k];
     }
 
     // merge everything back to the original array a
     for(k = lo; k <= hi; k++)
     {
         if(i > mid)  // the first half is already merged in aux, but the second not yet
-        {   
-            assign_array_content(&a[0], &aux[0],k,j);
-            //a[k] = aux[j];
+        {
+            a[k] = aux[j];
             j++;
         }
         else  // the first half isn't empty
         {
             if(j > hi)  // the second half has been already merged
             {
-                assign_array_content(&a[0], &aux[0],k,i);
-                //a[k]=aux[i]; // add the rest of the first half to the array
+                a[k]=aux[i]; // add the rest of the first half to the array
                 i++;
             }
             else
             {
                 if(aux[j] < aux[i])  // compare the values currently under consideration
                 {
-                    assign_array_content(&a[0], &aux[0],k,j);
-                    //a[k]= aux[j];
+                    a[k]= aux[j];
                     j++;
                 }
                 else
                 {
-                    assign_array_content(&a[0], &aux[0],k,i);
-                    //a[k]=aux[i];
+                    a[k]=aux[i];
                     i++;
                 }
             }
@@ -137,8 +132,7 @@ void merge(int a[],int lo, int mid, int hi, int aux[])
     }
 }
 
-// split and merge recursive
-void recursive_merge(int a[], int lo, int hi, int aux[])
+void recursive_merge(float a[], int lo, int hi, float aux[])
 {
     int mid;
     if (hi > lo)
@@ -149,42 +143,56 @@ void recursive_merge(int a[], int lo, int hi, int aux[])
         merge(a,lo,mid,hi,aux); // merge both halves to one sorted half
     }
 }
-void fsort(float data[], unsigned int n){
-	//Sorts n floating point numbers stored in memory starting from *data
-    int *aux = (int *) malloc(n * sizeof(int));
-    recursive_merge(a,0,n-1,aux);
-		printf("The sorted list is:");
-    free(aux);
-}
 
 void print_sorted_array(float data[], int n){
-    for(int temp = 0; temp < n, temp++ ){
-        printf("%f", data[temp] );    
+    int temp;
+    for(temp = 0; temp < n; temp++ ){
+        printf("%f\n", data[temp] );
     }
 }
 
-void main(){
-	int n;
-	int min_value;
-	int max_value;
-   //Ask for n
-	printf("Please enter here the amount of numbers that should be generated:");
-	scanf("%i", &n)
-
-	printf("\nPlease enter the min value of the wished data range:");
-	scanf("%i", &min_value);
-    //Ask for datarange
-	printf("\nPlease eter the max value of the wished data range:");
-	scanf("%i", &max_value)
-	//error checking
-	if(min_value >= max_value){
-	printf("Error: Your min and max value are either in wrong order or they are the same.");
-	}
-    //generate floating point numbers in array
-    int[n] data = malloc(n * sizeof(int));
-    // call fsort
-	fsort(data, n);
-	//print sorted array
-    print_sorted_array(data, n);
+void fsort(float data[], unsigned int n){
+    //Sorts n floating point numbers stored in memory starting from *data
+    float *aux =  malloc(n * sizeof(float)); // allocate memory on the heap
+    recursive_merge(data,0,n-1,aux);
+    printf("The sorted list is:");
+    free(aux);
 }
+int main(){
+    start_time();
+    int n;
+    int min_value;
+    int max_value;
+    //Ask for n
 
+    printf("Please enter here the amount of numbers that should be generated:");
+    scanf("%i", &n);
+    if(n < 0){
+        printf("The wanted amount of numbers is negative");
+        return 0;
+    }
+    //Ask for datarange
+
+    printf("\nPlease enter the min value of the wished data range:");
+    scanf("%i", &min_value);
+
+    printf("\nPlease enter the max value of the wished data range:");
+    scanf("%i", &max_value);
+
+    //error checking
+    if(min_value >= max_value){
+        printf("Error: Your min and max value are either in wrong order or they are the same.");
+        return 0;
+    }
+
+    if((min_value > const_max_value) || (max_value > const_max_value) ){
+        printf("We don't support such high numbers");
+        return 0;
+    }
+    seed(n); // initialize seed
+    float* data = malloc(n * sizeof(float));
+    generate_list(n,min_value,max_value,data); // generate with random items
+    fsort(data,n);             // sort the given items
+    print_sorted_array(data,n);
+    return 0;
+}

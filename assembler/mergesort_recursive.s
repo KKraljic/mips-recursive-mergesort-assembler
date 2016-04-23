@@ -344,7 +344,7 @@ rand:
 	addu $s0, $s0, $t0 						# $s0 = x + y
 	addu $s0, $s0, $t2
 	
-											# m = const_max_value
+											# m = const_m
 	divu $s0, $s2     						# ((a * x) + b) / m --> lo = quotient, hi = reminder
 	mfhi $v0        						# ((a * x) + b) % m in $v0, since reminder in hi
 	sw $v0, x   	
@@ -369,7 +369,7 @@ frand:
 	addi $t0, $v0, 0						# $t0 = random number from rand function
 	mtc1 $t0, $f5							# load random number in coprocessor
 	cvt.s.w $f5, $f5 						# convert random number from integer to floating point
-	div.s $f0, $f5, $f4						# $f0 = result = random number / max_random
+	div.s $f0, $f5, $f4						# $f0 = result = random number / const_max_value
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
 	j $ra									# jump back to calling function
