@@ -55,9 +55,9 @@ uint32_t rand_1(){
     */
 
     uint64_t t;
-    t = 698769069ULL * z + c;
+    t = 698769069 * z + c;
     c = t >> 32;
-    z = (uint32_t) t;
+    z = t;
     x = x + y +z;
 
     x = x % const_m;
