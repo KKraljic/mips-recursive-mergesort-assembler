@@ -7,8 +7,10 @@ line_break: .asciiz "\n"
 n_input_message: .asciiz "\nPlease enter here the amount of numbers that should be generated:"
 min_value_input_message: .asciiz "\nPlease enter the min value of the wished data range:"
 max_value_input_message: .asciiz "\nPlease enter the max value of the wished data range:"
-succesfully_sorted_message: .asciiz "\n Seems that everything is OK... But never trust a running system. There MUST be a bug! :D"
-print_initiaton_message: .asciiz "\n Your sorted array is:\n"
+succesfully_sorted_message: .asciiz "\nSeems that everything is OK... But never trust a running system. There MUST be a bug! :D"
+print_unsorted_message: .asciiz "Your unsorted array is:\n"
+print_sorted_message: .asciiz "\nYour sorted array is:\n"
+
 
 #error messages
 error_message_message: .asciiz "\nError: Your min and max value are either in wrong order or they are the same. Please try it again.\n\n"
@@ -21,7 +23,7 @@ const_a: .word 1103515245 					# init a, value for 32bit CPU
 const_b: .word 12345 						# init b
 const_m: .word 2147483648 					# equals 2^(31)
 x: .space 4
-buffer: .space 1024
+buffer: .space 5
 
 .globl main
 .text
@@ -317,7 +319,7 @@ rand:
 	
 # load all constants
 	lw $s0, x								# $s0 = x
-	li $s1, 69069 						# $s3 = a 
+	li $s1, 69069 							# $s3 = a 
 	lw $s2, const_m
 	li $s3, 12345
 	
@@ -377,7 +379,7 @@ frand:
 
 
 
-generate_list_item:							#TBD: In die MAIN packen?
+generate_list_item:							
 #$f0 = random_value; $f12 = min_value; $f13 = max_value
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
@@ -411,33 +413,29 @@ generate_list:
 
 generate_list_loop:
 	beq $s0, $zero, exit_generate_list_loop # if n reaches 0 exit
-	addi $s0, $s0, -1  						#decrement loop invariant by 1
+	addi $s0, $s0, -1  						# decrement loop invariant by 1
 	move $a0, $s1							# set min_value for subroutine on $a0
 	move $a1, $s2 							# set max_value for subroutine on $a1
 	
 	jal generate_list_item
 	
 	mov.s $f12, $f0   						# move $f0 to $f12 for syscall
-	swc1 $f0, 0($fp)						# save item at current position of heap
-	addi $fp, $fp, 4
+	swc1 $f0, 0($fp)						# save item at current position of heap	
 	li $v0, 2 								# print_float for syscall
 	syscall
 	
-	s.s $f12, buffer
-	
 	li $v0, 15								# syscall to write to file
 	move $a0, $s3							# move file descriptor to $a0
-	la $a1, buffer							# target to write from
+	la $a1, 0($fp)							# target to write from
 	li $a2, 4								# amount to be written
 	syscall									# syscall to write in file
 	
-	ulw $t0, line_break						# save the line_break in a temp
-	sw $t0, buffer							# put line_break on buffer
+	addi $fp, $fp, 4
 	
 	li $v0, 15								# syscall to write to file
 	move $a0, $s3							# move file descriptor to $a0
-	la $a1, buffer							# target to write from
-	li $a2, 4								# amount to be written
+	la $a1, line_break						# target to write from
+	li $a2, 1								# amount to be written
 	syscall									# syscall to write in file
 	
 	la $a0, line_break						# Load input message for the max value
@@ -480,21 +478,16 @@ print_loop:
 	li $v0, 2 								# print_float for syscall
 	syscall
 	
-	s.s $f12, buffer
-	
 	li $v0, 15								# syscall to write to file
 	move $a0, $s3							# move file descriptor to $a0
-	la $a1, buffer							# target to write from
+	la $a1, 0($t1)							# target to write from
 	li $a2, 4								# amount to be written
 	syscall									# syscall to write in file
 	
-	ulw $t0, line_break						# save the line_break in a temp
-	sw $t0, buffer							# put line_break on buffer
-	
 	li $v0, 15								# syscall to write to file
 	move $a0, $s3							# move file descriptor to $a0
-	la $a1, buffer							# target to write from
-	li $a2, 4								# amount to be written
+	la $a1, line_break							# target to write from
+	li $a2, 1								# amount to be written
 	syscall									# syscall to write in file
 	
 	la $a0, line_break						# Load input message for the max value
@@ -578,15 +571,37 @@ main:
 	slt $t0, $a2, $a3						# If min < max then TRUE
 	beq $t0, $zero, error_min_max			# else goto error_min_max
 	beq $a2, $a3, error_min_max				# If min = max goto error_min_max
+	
+	move $t1, $a0							# save all input parameters due to syscalls
+	move $t2, $a1
+	move $t3, $a2
+	
+	la $a0, print_unsorted_message			# Load input message for print_initiaton_message
+	li $v0, 4								# Load I/O code to print string to console
+	syscall	
+	
+	li $v0, 15								# syscall to write to file
+	move $a0, $s6							# move file descriptor to $a0
+	la $a1, print_unsorted_message							# target to write from
+	li $a2, 25								# amount to be written
+	syscall									# syscall to write in file
+	
+	move $a0, $t1							# restore all input parameters due to syscall
+	move $a1, $t2
+	move $a2, $t3
 
 	sll $a0, $a1, 2							# $a0 = size of array = n * 4
 	li $v0, 9								# Syscall to allocate memory on heap
 	syscall 								# takes size from $a0 = n * 4 and allocates the memory on heap
+	
 	move $s1, $v0							# Move start address of heap in $s1
 	move $fp, $s1 							# Set frame pointer to start address of heap
 
 	move $a0, $a1							# move n after all syscalls in $a0 to meet mips
-	jal seed 								# init r value
+	jal seed 								# init x value
+	
+	
+	
 
 	move $a1, $a2							# move min_value to $a1
 	move $a2, $a3							# move max_value to $a2
@@ -599,17 +614,14 @@ main:
 	
 	
 	
-	la $a0, print_initiaton_message			# Load input message for print_initiaton_message
+	la $a0, print_sorted_message			# Load input message for print_initiaton_message
 	li $v0, 4								# Load I/O code to print string to console
 	syscall	
 	
-	ulw $t0, print_initiaton_message		# save the print_initiaton_message in a temp
-	sw $t0, buffer							# put print_initiaton_message on buffer
-	
 	li $v0, 15								# syscall to write to file
 	move $a0, $s6							# move file descriptor to $a0
-	la $a1, buffer							# target to write from
-	li $a2, 1024							# amount to be written
+	la $a1, print_sorted_message			# target to write from
+	li $a2, 23								# amount to be written
 	syscall									# syscall to write in file
 
 	move $a0, $s1							# $a0 = a
@@ -621,13 +633,11 @@ main:
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
 	
-	ulw $t0, succesfully_sorted_message		# save succesfully_sorted_message in a temp
-	sw $t0, buffer							# put print_initiaton_message on buffer
 	
 	li $v0, 15								# syscall to write to file
 	move $a0, $s6							# move file descriptor to $a0
-	la $a1, buffer							# target to write from
-	li $a2, 1024							# amount to be written
+	la $a1, succesfully_sorted_message		# target to write from
+	li $a2, 89								# amount to be written
 	syscall									# syscall to write in file
 	
 	li   $v0, 16       						# system call for close file
