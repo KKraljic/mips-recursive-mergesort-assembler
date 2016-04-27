@@ -1,6 +1,10 @@
 .data
 #file strings
-fout:   .asciiz "C:\\Users\\kraljic\\Documents\\Theorie\\Skripte\\Semester 4\\Rechnerarchitektur\\Projekt\\assembler\\mergesort_recursive_output.txt"     
+fin: .asciiz "C:\\Users\\kraljic\\Documents\\Theorie\\Skripte\\Semester 4\\Rechnerarchitektur\\Projekt\\assembler\\mergesort_recursive_input.txt" 
+fout:   .asciiz "C:\\Users\\kraljic\\Documents\\Theorie\\Skripte\\Semester 4\\Rechnerarchitektur\\Projekt\\assembler\\mergesort_recursive_output.txt"   
+
+#menu strings
+select_input: .asciiz "Please select the method of input you want to use. \n\t1: Use your mergesort_recursive_input.txt file \n\t0: Generate several random numbers using this program.\n"  
 
 #informational strings
 line_break: .asciiz "\n"
@@ -13,6 +17,7 @@ print_sorted_message: .asciiz "\nYour sorted array is:\n"
 
 
 #error messages
+error_unknown_input: .asciiz "\nError: This is nit a valid parameter. Please try it again.\n"
 error_message_message: .asciiz "\nError: Your min and max value are either in wrong order or they are the same. Please try it again.\n\n"
 error_negative_amount_message: .asciiz "\n You tried to get a negative amount. We're not magicians. Try it again."
 error_exceeded_range_message: .asciiz "\n It seems that you are not getting enough... Try it again. Smob."
@@ -486,7 +491,7 @@ print_loop:
 	
 	li $v0, 15								# syscall to write to file
 	move $a0, $s3							# move file descriptor to $a0
-	la $a1, line_break							# target to write from
+	la $a1, line_break						# target to write from
 	li $a2, 1								# amount to be written
 	syscall									# syscall to write in file
 	
@@ -506,7 +511,7 @@ exit_print_loop:
 	
 	jr $ra
 	
-open_file:
+open_output_file:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	
@@ -520,7 +525,7 @@ open_file:
 	addi $sp, $sp, 4
 	jr $ra
 
-create_file:
+create_output_file:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	
@@ -534,14 +539,7 @@ create_file:
 	addi $sp, $sp, 4
 	jr $ra
 	
-
-main:
-	addi $t0, $zero, -1
-	jal open_file							# open the file to write to
-	beq $v0, $t0, create_file				# if return value -1 --> file not available --> create the file
-	move $s6, $v0      						# save the file descriptor  
-	
-	
+auto_generate_numbers:
 	lw $s0, const_m 						# $s0 = 2^31 maximal number we support
 	la $a0, n_input_message					# Load input message for n
 	li $v0, 4								# Load I/O code to print string to console
@@ -572,17 +570,17 @@ main:
 	beq $t0, $zero, error_min_max			# else goto error_min_max
 	beq $a2, $a3, error_min_max				# If min = max goto error_min_max
 	
-	move $t1, $a0							# save all input parameters due to syscalls
+	move $t1, $a0							# save all input parameters due to coming syscalls
 	move $t2, $a1
 	move $t3, $a2
 	
-	la $a0, print_unsorted_message			# Load input message for print_initiaton_message
+	la $a0, print_unsorted_message			# Load input message for print_unsorted_message
 	li $v0, 4								# Load I/O code to print string to console
 	syscall	
 	
 	li $v0, 15								# syscall to write to file
 	move $a0, $s6							# move file descriptor to $a0
-	la $a1, print_unsorted_message							# target to write from
+	la $a1, print_unsorted_message			# target to write from
 	li $a2, 25								# amount to be written
 	syscall									# syscall to write in file
 	
@@ -598,16 +596,12 @@ main:
 	move $fp, $s1 							# Set frame pointer to start address of heap
 
 	move $a0, $a1							# move n after all syscalls in $a0 to meet mips
-	jal seed 								# init x value
+	jal seed 								# init x value	
 	
-	
-	
-
 	move $a1, $a2							# move min_value to $a1
 	move $a2, $a3							# move max_value to $a2
 	move $a3, $s6							# Move first addres of heap in $a3
 	jal generate_list	 					# generate list
-
 	move $a0, $s1 							# $a0 = start address of heap
 	move $a1, $s2							# Restore n from $s2
 	jal fsort								# Call fsort
@@ -646,3 +640,88 @@ main:
 
 	li $v0, 10								# Load exit code to exit the program cleanly
 	syscall									# perform the syscall
+
+read_and_convert_from_input:
+
+	move $s6, $a0
+	addi $sp, $sp, -16
+	sw $ra, 12($sp)
+	#sw $s2, 8($sp)
+	sw $s1, 4($sp)
+	sw $s0, 0($sp)
+	
+	move $t0, $zero 						# $s2 = 0; temporary counter...
+	addi $t1, $t1, 0x2E						# $t1 = value of Ascii "......"- our termination string
+	move $t2, $zero 						# $t2 = current value of the read number
+
+read_from_input_loop:
+	beq $t2, $t1, read_from_input_loop_exit # if $t2 = ...... (termination symbol) goto read_from_input_loop_exit
+	addi $a0, $a0, 4						# $a0 = 4
+	li $v0, 9								# Syscall to allocate memory on heap
+	syscall 								# takes size from $a0 = 4 and allocates the memory on heap
+	move $s1, $v0							# $s1 = start address of input array
+	
+	li   $v0, 14       						# system call for read from file
+	move $a0, $s6      						# $a0 = file descriptor 
+	la   $a1, $s1   						# target address to which to read
+	li   $a2, 1	   							# read 1 character from input file
+	syscall            						# read from file
+	
+	addi $t0, $t0, 1						# $t0 = $t0 + 1; counts amount of numbers from input file
+	j read_from_input_loop_exit
+	
+read_from_input_loop_exit:
+	j convert_input_loop
+
+convert_input_loop:
+	beq , , convert_input_loop_exit
+
+convert_input_loop_exit:
+	lw $ra, 12($sp)
+	#lw $s2, 8($sp)
+	lw $s1, 4($sp)
+	lw $s0, 0($sp)
+	addi $sp, $sp, 16
+	
+	jr $ra
+	
+
+read_from_file:	
+	li   $v0, 13       						# system call for open file
+	la   $a0, fin     						# output file name
+	li   $a1, 1        						# Open for writing (flags are 0: read, 1: write)
+	li   $a2, 0        						# mode is ignored
+	syscall            						# open a file (file descriptor returned in $v0)
+	move $s6, $v0
+	move $a0, $s6
+	
+	jal read_and_convert_from_input	
+	
+	li   $v0, 16       						# system call for close file
+	move $a0, $s6      						# file descriptor to close
+	syscall            						# close file
+
+	li $v0, 10								# Load exit code to exit the program cleanly
+	syscall									# perform the syscall	
+
+main:
+	addi $t0, $zero, -1
+	jal open_output_file					# open the file to write to
+	beq $v0, $t0, create_output_file		# if return value -1 --> file not available --> create the file
+	move $s6, $v0      						# save the file descriptor  
+	
+	addi $t0, $zero, 1
+	la $a0, select_input					# Load input message for wished input type
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
+	li $v0, 5      							# read input_type from input
+	syscall
+	move $a0, $v0							# $a0 = input_selection
+	beq $a0, $zero, auto_generate_numbers	# if input_selection = 1: goto auto_generate_numbers
+	beq $a0, $t0, read_from_file			# if input_selection = 0: goto read_from_file
+	addi $t0, $zero, 1
+	la $a0, error_unknown_input				# Load input message for unknown input type
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
+	j main
+
