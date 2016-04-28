@@ -1,7 +1,7 @@
 .data
 #file strings
 fin: .asciiz "C:\\Users\\kraljic\\Documents\\Theorie\\Skripte\\Semester 4\\Rechnerarchitektur\\Projekt\\assembler\\mergesort_recursive_input.txt" 
-fout:   .asciiz "C:\\Users\\kraljic\\Documents\\Theorie\\Skripte\\Semester 4\\Rechnerarchitektur\\Projekt\\assembler\\mergesort_recursive_output.txt"   
+fout: .asciiz "C:\\Users\\kraljic\\Documents\\Theorie\\Skripte\\Semester 4\\Rechnerarchitektur\\Projekt\\assembler\\mergesort_recursive_output.txt"   
 
 #menu strings
 select_input: .asciiz "Please select the method of input you want to use. \n\t1: Use your mergesort_recursive_input.txt file \n\t0: Generate several random numbers using this program.\n"  
@@ -21,6 +21,7 @@ error_unknown_input: .asciiz "\nError: This is nit a valid parameter. Please try
 error_message_message: .asciiz "\nError: Your min and max value are either in wrong order or they are the same. Please try it again.\n\n"
 error_negative_amount_message: .asciiz "\n You tried to get a negative amount. We're not magicians. Try it again."
 error_exceeded_range_message: .asciiz "\n It seems that you are not getting enough... Try it again. Smob."
+error_invalid_char_message: .asciiz "\nYou did not enter a valid number. Hint:([0-9A-F]{8})(,[0-9A-F]{8})*\.\n"
 
 #constants
 const_max_value: .word 2147483647			# max_value = 2^31 -1
@@ -28,7 +29,7 @@ const_a: .word 1103515245 					# init a, value for 32bit CPU
 const_b: .word 12345 						# init b
 const_m: .word 2147483648 					# equals 2^(31)
 x: .space 4
-buffer: .space 5
+buffer: .space 12500
 
 .globl main
 .text
@@ -276,7 +277,11 @@ fsort:
 
 
 
-
+error_invalid_char:
+	la $a0, error_invalid_char_message		# Load input message for the error message, if min is >= max value
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
+	j main									# start program again
 
 
 error_min_max:
@@ -642,60 +647,137 @@ auto_generate_numbers:
 	syscall									# perform the syscall
 
 read_and_convert_from_input:
-
-	move $s6, $a0
-	addi $sp, $sp, -16
-	sw $ra, 12($sp)
-	#sw $s2, 8($sp)
-	sw $s1, 4($sp)
-	sw $s0, 0($sp)
+	move $t9, $zero
+	move $t9, $a0							# $t9 = file descriptor... We'll burn in hell for this.
+	addi $sp, $sp, -40
+	sw $ra, 36($sp)
+	sw $s7, 32($sp)
+	sw $s6, 28($sp)
+	sw $s5, 24($sp)
+	sw $s4, 20($sp)
+	sw $s3, 16($sp)
+	sw $s2, 12($sp)
+	sw $s1, 8($sp)
+	sw $s0, 4($sp)
+	sw $t9, 0($sp)
 	
-	move $t0, $zero 						# $s2 = 0; temporary counter...
-	addi $t1, $t1, 0x2E						# $t1 = value of Ascii "......"- our termination string
-	move $t2, $zero 						# $t2 = current value of the read number
-
-read_from_input_loop:
-	beq $t2, $t1, read_from_input_loop_exit # if $t2 = ...... (termination symbol) goto read_from_input_loop_exit
-	addi $a0, $a0, 4						# $a0 = 4
+	la $s1, buffer
+	addi $a0, $zero, 0						# $a0 = 0
 	li $v0, 9								# Syscall to allocate memory on heap
-	syscall 								# takes size from $a0 = 4 and allocates the memory on heap
-	move $s1, $v0							# $s1 = start address of input array
+	syscall 								# takes size from $a0 = 0 and allocates the memory on heap
+	move $s4, $v0							# $s4 = start address of input array
+											##TBD: Error handling if input size > 8 digits	
+	addi $s6, $zero, 46						# $s6 = value of Ascii "."- our termination string
+	addi $s7, $zero, 44						# $s7 = value of Ascii ","- our seperator
+	move $s3, $zero							# $s3 = 0; value of hex number
 	
+#Read gs symbol --> control symbol of OS
 	li   $v0, 14       						# system call for read from file
-	move $a0, $s6      						# $a0 = file descriptor 
-	la   $a1, $s1   						# target address to which to read
-	li   $a2, 1	   							# read 1 character from input file
+	move $a0, $t9      						# $a0 = file descriptor 
+	move $a1, $s1   						# read to buffer
+	li   $a2, 12500	   						# read 12500 characters from input file
 	syscall            						# read from file
 	
-	addi $t0, $t0, 1						# $t0 = $t0 + 1; counts amount of numbers from input file
-	j read_from_input_loop_exit
-	
-read_from_input_loop_exit:
 	j convert_input_loop
+	
+read_next_number:
+	addi $a0, $a0, 4						# $a0 = 4
+	li $v0, 9								# Syscall to allocate memory on heap
+	syscall 								# takes size from $a0 = 4 and allocates the memory on heap	
+	sw $s2, 0($v0)							# Save current number on heap
+	
+	addi $s5, $s5, 1						# $s5 = n = n + 1
+	
+	j convert_input_loop
+	
+check_and_convert_to_binary:
+	addi $sp, $sp, -8
+	sw $ra, 4($sp)
+	sw $s0, 0($sp)	
+	
+	move $s0, $a0							# $s0 = current digit
+	
+	li $t0, 48								# $t0 = 48 = Ascii 0
+	li $t1, 57								# $t1 = 57 = Ascii 9
+	li $t2, 65								# $t2 = 65 = Ascii A
+	li $t3, 70								# $t3 = 70 = Ascii F
+	li $t4, 1								# $t4 = 1 = Ascii Start of Heading
+	
+	beq $s0, $t4, convert_input_loop
+	bltu $s0, $t0, error_invalid_char 		# if $s0 < 48 then stop (numbers start in Ascii at 48!)
+	bgtu $s0, $t1, check_letters			# if $s0 > 57 then check letters (9, the biggest number, is Ascii 57)
+	
+	addiu $v0, $s0, -48						# $v0 = Ascii value digit - 48 
+	j finish_convert_to_binary
+
+check_letters:
+	bltu $s0, $t2, error_invalid_char		# if $s0 < 65 then stop (digit not number nor Hex letter)
+	bgtu $s0, $t3, error_invalid_char		# if $s0 > 70 then stop (digit not number nor Hex letter)
+	addiu $v0, $s0, -55						# $v0 = Ascii value digit - 55
+	j finish_convert_to_binary
+
+finish_convert_to_binary:
+	lw $ra, 4($sp)
+	lw $s0, 0($sp)	
+	addi $sp, $sp, 8
+	jr $ra
 
 convert_input_loop:
-	beq , , convert_input_loop_exit
+	lbu $s2, 0($s1)							# current symbol = symbol in buffer
+	addiu $s1, $s1, 1						# increase address of buffer
+	
+	beq $s2, $s6, convert_input_loop_exit 	# if $s2 = . (termination symbol) goto read_from_input_loop_exit
+	beq $s2, $s7, read_next_number			# if $s2 = , (seperator) goto read_next_number
+	move $a0, $s2
+	jal check_and_convert_to_binary		
+	lw $t9, 0($sp)							# restore file descriptor
+	move $s2, $v0 							# $s2 = binary value of current symbol
+	addu $s3, $s3, $s2						# $s3 = current value of overall number
+	sll $s3, $s3, 4							# shift $s3 by 16^1 digits (1 hex digit)	
+	
+	j convert_input_loop
 
 convert_input_loop_exit:
-	lw $ra, 12($sp)
-	#lw $s2, 8($sp)
-	lw $s1, 4($sp)
-	lw $s0, 0($sp)
-	addi $sp, $sp, 16
+	addi $s5, $s5, 1						# $s5 = n = n + 1
+	move $v0, $s4							# $v0 = start address of array on heap
+	move $v1, $s5							# $v1 = n 
+	
+	lw $ra, 36($sp)
+	lw $s7, 32($sp)
+	lw $s6, 28($sp)
+	lw $s5, 24($sp)
+	lw $s4, 20($sp)
+	lw $s3, 16($sp)
+	lw $s2, 12($sp)
+	lw $s1, 8($sp)
+	lw $s0, 4($sp)
+	lw $t9, 0($sp)
+	addi $sp, $sp, 40
 	
 	jr $ra
 	
 
 read_from_file:	
+	addi $sp, $sp, -12
+	sw $ra, 8($sp)
+	sw $s1, 4($sp)
+	sw $s0, 0($sp)
+	
 	li   $v0, 13       						# system call for open file
 	la   $a0, fin     						# output file name
-	li   $a1, 1        						# Open for writing (flags are 0: read, 1: write)
+	li   $a1, 0        						# Open for writing (flags are 0: read, 1: write)
 	li   $a2, 0        						# mode is ignored
 	syscall            						# open a file (file descriptor returned in $v0)
-	move $s6, $v0
-	move $a0, $s6
+	move $s6, $v0							# $s6 = $v0 = file desriptor
+	move $a0, $s6							# $a0 = $s6 = file descriptor
 	
 	jal read_and_convert_from_input	
+	move $s0, $v0							#$s0 = a;start address of input array
+	move $s1, $v1 							#$s1 = n; amount of items
+	
+	move $a0, $s0							# $a0 = a
+	move $a1, $s1							# $a1 = n
+	jal fsort
 	
 	li   $v0, 16       						# system call for close file
 	move $a0, $s6      						# file descriptor to close
