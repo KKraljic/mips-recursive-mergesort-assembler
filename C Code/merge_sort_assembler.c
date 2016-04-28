@@ -22,7 +22,7 @@ uint32_t rand(){
    y ^= y << 5;
 
    // Multiply-with-carry
-   t = 349384534 * z + c; //Not using the ULL variant due to simplification reasons
+   t = 698769069 * z + c; //Not using the ULL variant due to simplification reasons
    c = t >> 32;
    z = (uint32_t) t;
 
@@ -48,13 +48,7 @@ void recursive_merge(int a[], int lo, int hi, int aux[])
         merge(a,lo,mid,hi,aux); // merge both halves to one sorted half
     }
 }
-void recursive_merge_sort(int a[], int n)
-{
-    int *aux = (int *) malloc(n * sizeof(int));
-    recursive_merge(a,0,n-1,aux);
-		printf("The sorted list is:");
-    free(aux);
-}
+
 // function that merges two sub lists
 void merge(int a[],int lo, int mid, int hi, int aux[])
 {
@@ -99,9 +93,12 @@ void merge(int a[],int lo, int mid, int hi, int aux[])
     }
 }
 
-void fsort(float *data, unsigned int n){
+void fsort(float data[], unsigned int n){
 	//Sorts n floating point numbers stored in memory starting from *data
-
+    int *aux = (int *) malloc(n * sizeof(int));
+    recursive_merge(a,0,n-1,aux);
+		printf("The sorted list is:");
+    free(aux);
 }
 
 
@@ -115,7 +112,7 @@ void main(){
 
 	printf("\nPlease enter the min value of the wished data range:");
 	scanf("%i", &min_value);
-//Ask for datarange
+    //Ask for datarange
 	printf("\nPlease eter the max value of the wished data range:");
 	scanf("%i", &max_value)
 	//error checking
