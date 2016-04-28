@@ -796,14 +796,50 @@ read_from_file:
 	beq $v0, $t0, create_output_file		# if return value -1 --> file not available --> create the file
 	move $s6, $v0      						# save the file descriptor  
 	
-	move $a0, $s0							# $a0 = a
-	move $a1, $s1							# $a1 = n
-	jal fsort
+	la $a0, print_unsorted_message			# Load input message for print_unsorted_message
+	li $v0, 4								# Load I/O code to print string to console
+	syscall	
+	
+	li $v0, 15								# syscall to write to file
+	move $a0, $s6							# move file descriptor to $a0
+	la $a1, print_unsorted_message			# target to write from
+	li $a2, 25								# amount to be written
+	syscall									# syscall to write in file
 	
 	move $a0, $s0							# $a0 = a
 	move $a1, $s1							# $a1 = n
 	move $a2, $s6							# $a2 = file descriptor
 	jal print_sorted_array
+	
+	move $a0, $s0							# $a0 = a
+	move $a1, $s1							# $a1 = n
+	jal fsort
+	
+	la $a0, print_sorted_message			# Load input message for print_unsorted_message
+	li $v0, 4								# Load I/O code to print string to console
+	syscall	
+	
+	li $v0, 15								# syscall to write to file
+	move $a0, $s6							# move file descriptor to $a0
+	la $a1, print_sorted_message			# target to write from
+	li $a2, 25								# amount to be written
+	syscall									# syscall to write in file
+	
+	move $a0, $s0							# $a0 = a
+	move $a1, $s1							# $a1 = n
+	move $a2, $s6							# $a2 = file descriptor
+	jal print_sorted_array
+	
+	la $a0, succesfully_sorted_message		# Load successfull message for the max value
+	li $v0, 4								# Load I/O code to print string to console
+	syscall									# print string
+	
+	
+	li $v0, 15								# syscall to write to file
+	move $a0, $s6							# move file descriptor to $a0
+	la $a1, succesfully_sorted_message		# target to write from
+	li $a2, 89								# amount to be written
+	syscall									# syscall to write in file
 	
 	li   $v0, 16       						# system call for close file
 	move $a0, $s6      						# file descriptor to close
