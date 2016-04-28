@@ -255,7 +255,7 @@ fsort:
 	sw $ra, 4($sp)							# Save jump back address on stack
 	sw $s0, 0($sp)							# Save $s0 on memory
 	move $t0, $a0							# Move start address of input array on heap to $t0
-	move $t1, $a1							# Move n to $t1
+	move $t1, $a1							# $t1 = n
 	sll $a0, $a1, 2							# $a0 = size of array = n * 4
 	li $v0, 9								# Syscall to allocate memory on heap
 	syscall 								# takes size from $a0 = n * 4 and allocates the memory on heap
@@ -545,6 +545,11 @@ create_output_file:
 	jr $ra
 	
 auto_generate_numbers:
+	addi $t0, $zero, -1
+	jal open_output_file					# open the file to write to
+	beq $v0, $t0, create_output_file		# if return value -1 --> file not available --> create the file
+	move $s6, $v0      						# save the file descriptor  
+	
 	lw $s0, const_m 						# $s0 = 2^31 maximal number we support
 	la $a0, n_input_message					# Load input message for n
 	li $v0, 4								# Load I/O code to print string to console
@@ -681,10 +686,11 @@ read_and_convert_from_input:
 	j convert_input_loop
 	
 read_next_number:
-	addi $a0, $a0, 4						# $a0 = 4
+	addi $a0, $zero, 4						# $a0 = 4
 	li $v0, 9								# Syscall to allocate memory on heap
 	syscall 								# takes size from $a0 = 4 and allocates the memory on heap	
-	sw $s2, 0($v0)							# Save current number on heap
+	sw $s3, 0($v0)							# Save current number on heap
+	move $s0, $zero 						# $s3 = 0
 	
 	addi $s5, $s5, 1						# $s5 = n = n + 1
 	
@@ -728,16 +734,21 @@ convert_input_loop:
 	
 	beq $s2, $s6, convert_input_loop_exit 	# if $s2 = . (termination symbol) goto read_from_input_loop_exit
 	beq $s2, $s7, read_next_number			# if $s2 = , (seperator) goto read_next_number
+	sll $s3, $s3, 4							# shift $s3 by 16^1 digits (1 hex digit)
 	move $a0, $s2
 	jal check_and_convert_to_binary		
 	lw $t9, 0($sp)							# restore file descriptor
 	move $s2, $v0 							# $s2 = binary value of current symbol
-	addu $s3, $s3, $s2						# $s3 = current value of overall number
-	sll $s3, $s3, 4							# shift $s3 by 16^1 digits (1 hex digit)	
+	addu $s3, $s3, $s2						# $s3 = current value of overall number	
 	
 	j convert_input_loop
 
 convert_input_loop_exit:
+	addi $a0, $zero, 4						# $a0 = 4
+	li $v0, 9								# Syscall to allocate memory on heap
+	syscall 								# takes size from $a0 = 4 and allocates the memory on heap	
+	sw $s3, 0($v0)							# Save current number on heap
+
 	addi $s5, $s5, 1						# $s5 = n = n + 1
 	move $v0, $s4							# $v0 = start address of array on heap
 	move $v1, $s5							# $v1 = n 
@@ -772,25 +783,36 @@ read_from_file:
 	move $a0, $s6							# $a0 = $s6 = file descriptor
 	
 	jal read_and_convert_from_input	
+	
 	move $s0, $v0							#$s0 = a;start address of input array
 	move $s1, $v1 							#$s1 = n; amount of items
+	
+	li   $v0, 16       						# system call for close file
+	move $a0, $s6      						# file descriptor to close
+	syscall            						# close file
+	
+	addi $t0, $zero, -1
+	jal open_output_file					# open the file to write to
+	beq $v0, $t0, create_output_file		# if return value -1 --> file not available --> create the file
+	move $s6, $v0      						# save the file descriptor  
 	
 	move $a0, $s0							# $a0 = a
 	move $a1, $s1							# $a1 = n
 	jal fsort
 	
+	move $a0, $s0							# $a0 = a
+	move $a1, $s1							# $a1 = n
+	move $a2, $s6							# $a2 = file descriptor
+	jal print_sorted_array
+	
 	li   $v0, 16       						# system call for close file
 	move $a0, $s6      						# file descriptor to close
-	syscall            						# close file
+	syscall            						# close file	
 
 	li $v0, 10								# Load exit code to exit the program cleanly
 	syscall									# perform the syscall	
 
 main:
-	addi $t0, $zero, -1
-	jal open_output_file					# open the file to write to
-	beq $v0, $t0, create_output_file		# if return value -1 --> file not available --> create the file
-	move $s6, $v0      						# save the file descriptor  
 	
 	addi $t0, $zero, 1
 	la $a0, select_input					# Load input message for wished input type
