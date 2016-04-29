@@ -3,6 +3,20 @@
 #include <time.h>
 #include <stdint.h>
 
+// C specific declaration of functions
+void start_time();
+int stop_time();
+void seed(int n);
+uint32_t rand_1();
+float frand();
+float generate_list_item(int min_value, int max_value);
+void generate_list(int n, int min, int max, float a[]);
+void merge(float a[],int lo, int mid, int hi, float aux[]);
+void recursive_merge(float a[], int lo, int hi, float aux[]);
+void print_sorted_array(float data[], int n, FILE* fileDescriptor);
+void fsort(float data[], unsigned int n);
+void writeFile(float a[], int n, FILE* fileDescriptor );
+
 time_t start;
 time_t end;
 void start_time()
@@ -144,11 +158,12 @@ void recursive_merge(float a[], int lo, int hi, float aux[])
     }
 }
 
-void print_sorted_array(float data[], int n){
+void print_sorted_array(float data[], int n, FILE* fileDescriptor){
     int temp;
     for(temp = 0; temp < n; temp++ ){
         printf("%f\n", data[temp] );
     }
+    writeFile(data, n, fileDescriptor);
 }
 
 void fsort(float data[], unsigned int n){
@@ -158,6 +173,21 @@ void fsort(float data[], unsigned int n){
     printf("The sorted list is:");
     free(aux);
 }
+/*
+ * The function writes the output  into a file
+ * the assembler output does not look format it the right way
+ * since it uses big endian and it is difficult to format it correctly in assembler
+ *
+ */
+void writeFile(float a[], int n, FILE* fileDescriptor ){
+    int i;
+    for (i = 0; i < n; i++) {
+        fprintf(fileDescriptor, "%f\n", a[i]);
+    }
+}
+
+
+
 int main(){
     start_time();
     int n;
@@ -193,6 +223,7 @@ int main(){
     float* data = malloc(n * sizeof(float));
     generate_list(n,min_value,max_value,data); // generate with random items
     fsort(data,n);             // sort the given items
-    print_sorted_array(data,n);
+    FILE* fileDescriptor = fopen( "merge_output.txt", "w" );
+    print_sorted_array(data,n, fileDescriptor);
     return 0;
 }
