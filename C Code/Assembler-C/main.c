@@ -16,9 +16,11 @@ void recursive_merge(float a[], int lo, int hi, float aux[]);
 void print_sorted_array(float data[], int n, FILE* fileDescriptor);
 void fsort(float data[], unsigned int n);
 void writeFile(float a[], int n, FILE* fileDescriptor );
+float* readInputFromFile(FILE* fileDescriptor);
 
 time_t start;
 time_t end;
+int itemnumber; // number of items to be sorted
 void start_time()
 {
     start = time(NULL);
@@ -88,7 +90,7 @@ float frand(){
 float generate_list_item(int min_value, int max_value){
     float random_value = frand();
     float t = min_value + (random_value * ( max_value - min_value));
-    printf("List item = %f\n",t);
+    //printf("List item = %f\n",t);
     return t;
 }
 
@@ -186,6 +188,62 @@ void writeFile(float a[], int n, FILE* fileDescriptor ){
     }
 }
 
+/*
+ * This functions reads the floating point numbers in HEX from file.
+ */
+float* readInputFromFile(FILE* fileDescriptor){
+    float a[12500]; // fixed value for reading input
+    // ASCII Codes
+    int A = 65; // ASCII A
+    int F = 70; // ASCII F
+    int zero =  48; // ASCII 0
+    int nine = 57; // ASCII 9
+
+    // define union for byte to float conversion
+    union float_bytes {
+        float val;
+        unsigned char bytes[8];
+    } input;
+
+    // read loop
+    unsigned char ascii_buffer;
+    int i = 0;
+    int j = 0;
+    do{
+        fread(&ascii_buffer, sizeof(unsigned char), 1, fileDescriptor);
+        if(ascii_buffer != 44) // ASCII ,
+            {
+            if( (ascii_buffer >= zero) && (ascii_buffer <= nine)){
+                input.bytes[i]  = ascii_buffer - zero;
+                i++;
+            }
+            if( (ascii_buffer >= A) && (ascii_buffer <= F) ) {
+                input.bytes[i] = ascii_buffer - (A - 10);
+                i++;
+            }
+        }
+        if( ascii_buffer == 44) // ascii value ,
+            // read next number
+        {
+            a[j] = input.val;
+            i = 0;
+            j++;
+        }
+    } while(ascii_buffer != 46); // ascii value .
+    // read last number
+    a[j] = input.val;
+    j++;
+    // close file
+    fclose(fileDescriptor);
+    int k;
+    float* result = malloc(j * sizeof(float));
+    for(k = 0; k < j; k++) {
+        result[k] = a[k]; // copy from large array into fitting array
+    }
+    itemnumber = j; // set global counter for items / elements
+    return result;
+
+}
 
 
 int main(){
@@ -193,37 +251,55 @@ int main(){
     int n;
     int min_value;
     int max_value;
-    //Ask for n
+    int fileRead = 3;
+    float *data; // array that contains the input
+    /*
+     * This replaces the 'goto main' in assembler in case an invalid number was presented
+     * goto statements are are considered bad practice and strongly discouraged in C!!!
+     */
+        // Ask if the user want to read numbers from file input
+        printf(" Do you want to read numbers from a file?, yes (1) or no (0)");
+        scanf("%i", &fileRead);
+    if (fileRead == 0) {
+        //Ask for n
+        printf("Please enter here the amount of numbers that should be generated:");
+        scanf("%i", &n);
+        if (n < 0) {
+            printf("The wanted amount of numbers is negative");
+            return 0;
+        }
+        //Ask for datarange
 
-    printf("Please enter here the amount of numbers that should be generated:");
-    scanf("%i", &n);
-    if(n < 0){
-        printf("The wanted amount of numbers is negative");
-        return 0;
+        printf("\nPlease enter the min value of the wished data range:");
+        scanf("%i", &min_value);
+
+        printf("\nPlease enter the max value of the wished data range:");
+        scanf("%i", &max_value);
+
+        //error checking
+        if (min_value >= max_value) {
+            printf("Error: Your min and max value are either in wrong order or they are the same.");
+            return 0;
+        }
+
+        if ((min_value > const_max_value) || (max_value > const_max_value)) {
+            printf("We don't support such high numbers");
+            return 0;
+        }
+        seed(n); // initialize seed
+        data = malloc(n * sizeof(float));
+        generate_list(n, min_value, max_value, data); // generate with random items
     }
-    //Ask for datarange
-
-    printf("\nPlease enter the min value of the wished data range:");
-    scanf("%i", &min_value);
-
-    printf("\nPlease enter the max value of the wished data range:");
-    scanf("%i", &max_value);
-
-    //error checking
-    if(min_value >= max_value){
-        printf("Error: Your min and max value are either in wrong order or they are the same.");
-        return 0;
+    else{
+        seed(12); // initialize seed with constant value
+        FILE* inputfile = fopen("C:\\assembler\\mergesort_recursive_input.txt", "r");
+        data = readInputFromFile(inputfile);
+        n = itemnumber;
     }
 
-    if((min_value > const_max_value) || (max_value > const_max_value) ){
-        printf("We don't support such high numbers");
-        return 0;
-    }
-    seed(n); // initialize seed
-    float* data = malloc(n * sizeof(float));
-    generate_list(n,min_value,max_value,data); // generate with random items
     fsort(data,n);             // sort the given items
-    FILE* fileDescriptor = fopen( "merge_output.txt", "w" );
-    print_sorted_array(data,n, fileDescriptor);
+    FILE* fileOutputDescriptor = fopen( "C:\\assembler\\merge_output.txt", "a+" ); // open file with syscall
+    print_sorted_array(data,n, fileOutputDescriptor); // print to console and file
+    fclose(fileOutputDescriptor);
     return 0;
 }
