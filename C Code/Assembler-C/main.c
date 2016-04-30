@@ -202,31 +202,32 @@ float* readInputFromFile(FILE* fileDescriptor){
     // define union for byte to float conversion
     union float_bytes {
         float val;
-        unsigned char bytes[8];
+        int integer;
     } input;
 
     // read loop
     unsigned char ascii_buffer;
-    int i = 0;
+    input.integer = 0;
     int j = 0;
     do{
         fread(&ascii_buffer, sizeof(unsigned char), 1, fileDescriptor);
         if(ascii_buffer != 44) // ASCII ,
             {
             if( (ascii_buffer >= zero) && (ascii_buffer <= nine)){
-                input.bytes[i]  = ascii_buffer - zero;
-                i++;
+                input.integer << 4;
+                input.integer  = input.integer + ascii_buffer - zero;
             }
             if( (ascii_buffer >= A) && (ascii_buffer <= F) ) {
-                input.bytes[i] = ascii_buffer - (A - 10);
-                i++;
+                input.integer << 4;
+                input.integer = input.integer + ascii_buffer - (A - 10);
+
             }
         }
         if( ascii_buffer == 44) // ascii value ,
             // read next number
         {
             a[j] = input.val;
-            i = 0;
+            input.integer = 0;
             j++;
         }
     } while(ascii_buffer != 46); // ascii value .
@@ -301,5 +302,6 @@ int main(){
     FILE* fileOutputDescriptor = fopen( "C:\\assembler\\merge_output.txt", "a+" ); // open file with syscall
     print_sorted_array(data,n, fileOutputDescriptor); // print to console and file
     fclose(fileOutputDescriptor);
+    printf("%i",sizeof(float));
     return 0;
 }
