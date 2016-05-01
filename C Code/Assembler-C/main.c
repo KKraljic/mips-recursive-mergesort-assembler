@@ -13,7 +13,7 @@ float generate_list_item(int min_value, int max_value);
 void generate_list(int n, int min, int max, float a[]);
 void merge(float a[],int lo, int mid, int hi, float aux[]);
 void recursive_merge(float a[], int lo, int hi, float aux[]);
-void print_sorted_array(float data[], int n, FILE* fileDescriptor);
+void print_array(float data[], int n, FILE* fileDescriptor);
 void fsort(float data[], unsigned int n);
 void writeFile(float a[], int n, FILE* fileDescriptor );
 float* readInputFromFile(FILE* fileDescriptor);
@@ -99,7 +99,6 @@ void generate_list(int n, int min, int max, float a[]){
     int t = 0;
     while(t < n){
         a[t] = generate_list_item( min, max );
-        printf("%f\n",a[t]);
         t++;
     }
 }
@@ -160,7 +159,7 @@ void recursive_merge(float a[], int lo, int hi, float aux[])
     }
 }
 
-void print_sorted_array(float data[], int n, FILE* fileDescriptor){
+void print_array(float data[], int n, FILE* fileDescriptor){
     int temp;
     for(temp = 0; temp < n; temp++ ){
         printf("%f\n", data[temp] );
@@ -172,7 +171,6 @@ void fsort(float data[], unsigned int n){
     //Sorts n floating point numbers stored in memory starting from *data
     float *aux =  malloc(n * sizeof(float)); // allocate memory on the heap
     recursive_merge(data,0,n-1,aux);
-    printf("The sorted list is:");
     free(aux);
 }
 /*
@@ -194,8 +192,8 @@ void writeFile(float a[], int n, FILE* fileDescriptor ){
 float* readInputFromFile(FILE* fileDescriptor){
     float a[12500]; // fixed value for reading input
     // ASCII Codes
-    int A = 65; // ASCII A
-    int F = 70; // ASCII F
+    int ascii_a = 65; // ASCII A
+    int ascii_f = 70; // ASCII F
     int zero =  48; // ASCII 0
     int nine = 57; // ASCII 9
 
@@ -209,18 +207,17 @@ float* readInputFromFile(FILE* fileDescriptor){
     unsigned char ascii_buffer;
     input.integer = 0;
     int j = 0;
-    do{
+    while(ascii_buffer != 46){
         fread(&ascii_buffer, sizeof(unsigned char), 1, fileDescriptor);
         if(ascii_buffer != 44) // ASCII ,
             {
             if( (ascii_buffer >= zero) && (ascii_buffer <= nine)){
-                input.integer << 4;
+                input.integer = input.integer << 4;
                 input.integer  = input.integer + ascii_buffer - zero;
             }
-            if( (ascii_buffer >= A) && (ascii_buffer <= F) ) {
-                input.integer << 4;
-                input.integer = input.integer + ascii_buffer - (A - 10);
-
+            if( (ascii_buffer >= ascii_a) && (ascii_buffer <= ascii_f) ) {
+                input.integer = input.integer << 4;
+                input.integer = input.integer + ascii_buffer - (ascii_a - 10);
             }
         }
         if( ascii_buffer == 44) // ascii value ,
@@ -230,8 +227,8 @@ float* readInputFromFile(FILE* fileDescriptor){
             input.integer = 0;
             j++;
         }
-    } while(ascii_buffer != 46); // ascii value .
-    // read last number
+    };// ascii value .
+    // read last number1
     a[j] = input.val;
     j++;
     // close file
@@ -239,7 +236,7 @@ float* readInputFromFile(FILE* fileDescriptor){
     int k;
     float* result = malloc(j * sizeof(float));
     for(k = 0; k < j; k++) {
-        result[k] = a[k]; // copy from large array into fitting array
+       result[k] = a[k]; // copy from large array into fitting array
     }
     itemnumber = j; // set global counter for items / elements
     return result;
@@ -254,37 +251,41 @@ int main(){
     int max_value;
     int fileRead = 3;
     float *data; // array that contains the input
+    FILE* fileOutputDescriptor = fopen( "C:\\assembler\\merge_output.txt", "w+" ); // open file with syscall
     /*
      * This replaces the 'goto main' in assembler in case an invalid number was presented
-     * goto statements are are considered bad practice and strongly discouraged in C!!!
+     * goto statements are considered as bad practice and strongly discouraged in C!!!
      */
         // Ask if the user want to read numbers from file input
-        printf(" Do you want to read numbers from a file?, yes (1) or no (0)");
+        printf("\nDo you want to read numbers from a file?, yes (1) or no (0)\n");
         scanf("%i", &fileRead);
     if (fileRead == 0) {
         //Ask for n
-        printf("Please enter here the amount of numbers that should be generated:");
+        printf("\nPlease enter here the amount of numbers that should be generated:\n");
         scanf("%i", &n);
         if (n < 0) {
-            printf("The wanted amount of numbers is negative");
+            printf("\nThe wanted amount of numbers is negative\n");
+            fprintf(fileOutputDescriptor, "\nThe wanted amount of numbers is negative\n");
             return 0;
         }
         //Ask for datarange
 
-        printf("\nPlease enter the min value of the wished data range:");
+        printf("\nPlease enter the min value of the wished data range:\n");
         scanf("%i", &min_value);
 
-        printf("\nPlease enter the max value of the wished data range:");
+        printf("\nPlease enter the max value of the wished data range:\n");
         scanf("%i", &max_value);
 
         //error checking
         if (min_value >= max_value) {
-            printf("Error: Your min and max value are either in wrong order or they are the same.");
+            printf("\nError: Your min and max value are either in wrong order or they are the same.\n");
+            fprintf(fileOutputDescriptor, "\nError: Your min and max value are either in wrong order or they are the same.\n");
             return 0;
         }
 
         if ((min_value > const_max_value) || (max_value > const_max_value)) {
-            printf("We don't support such high numbers");
+            printf("\nWe don't support such high numbers\n");
+            fprintf(fileOutputDescriptor, "\nWe don't support such high numbers\n");
             return 0;
         }
         seed(n); // initialize seed
@@ -296,12 +297,23 @@ int main(){
         FILE* inputfile = fopen("C:\\assembler\\mergesort_recursive_input.txt", "r");
         data = readInputFromFile(inputfile);
         n = itemnumber;
+        fclose(inputfile);
     }
 
+    printf("\nThe unsorted array is:\n");
+    fprintf(fileOutputDescriptor, "\nThe unsorted array is:\n");
+
+    print_array(data, n, fileOutputDescriptor); //print unsorted array
     fsort(data,n);             // sort the given items
-    FILE* fileOutputDescriptor = fopen( "C:\\assembler\\merge_output.txt", "a+" ); // open file with syscall
-    print_sorted_array(data,n, fileOutputDescriptor); // print to console and file
+
+    printf("\nThe sorted array is:\n");
+    fprintf(fileOutputDescriptor, "\nThe sorted array is:\n");
+
+    print_array(data,n, fileOutputDescriptor); // print to console and file
+
+    printf("\nSeems that everything is OK... But never trust a running system. There MUST be a bug! :D");
+    fprintf(fileOutputDescriptor,"\nSeems that everything is OK... But never trust a running system. There MUST be a bug! :D");
+
     fclose(fileOutputDescriptor);
-    printf("%i",sizeof(float));
     return 0;
 }
