@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdint.h>
+/*
+WICHTIGER HINWEIS: Der C Code weicht partiell aus Implementierungsgründen vom Assemblercode ab.
+Diese Änderungen betreffen nur ganz spezielle Bereiche des Codes, z.B. die Konvertierung von ASCII
+in das Gleitkommaformat.
+*/
 
 // C specific declaration of functions
 void start_time();
