@@ -729,8 +729,9 @@ auto_generate_numbers:
 	syscall                                 # scanf("%i", &n);
 	move $s2, $v0							# $s2 = $v0 = n read from input
 
-	ble $a1, $zero, error_negative_amount	# if(n < 0){...}
-
+	ble $s2, $zero, error_negative_amount	# if(n < 0){...}
+	bge $s2, $s0, error_exceeded_range		# if (n >= const_m) {...}
+	
 	la $a0, min_value_input_message			# Load input message for the min_value
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# printf("\nPlease enter the min value of the wished data range\n");
@@ -833,7 +834,7 @@ read_from_file:
 	li   $v0, 13       						# system call to open file
 	la   $a0, input_file					# file name & path of targeted file
 	li   $a1, 0        						# Open for reading (flags are 0: read, 1: write)
-	li   $a2, 0        						# mode is ignored
+	li   $a2, 0        						#
 	syscall            						# fopen(input_file, flag);
 	move $s6, $v0							# $s6 = $v0 = input_file = fopen(...);
 	
