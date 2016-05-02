@@ -214,13 +214,13 @@ fsort:
 #======================================End of initilization of sort logic
 #=========================Start of split logic
 recursive_merge:
-	addi $sp, $sp, -24						#decrease stackpointer to store the mid value, sp and fp
+	addi $sp, $sp, -24						#decrease stackpointer
 	sw $ra, 20($sp)							#save ra on the stack
 	sw $s4, 16($sp)
 	sw $s3, 12($sp)							# save $s3 on stack
 	sw $s2, 8($sp)							# save $s2 on stack
-	sw $s1, 4($sp)							#save $s1 on stack
-	sw $s0, 0($sp)							#save $s0 on stack
+	sw $s1, 4($sp)							# save $s1 on stack
+	sw $s0, 0($sp)							# save $s0 on stack
 
 	move $s0, $a0							# $s0 = $a0 = a
 	move $s1, $a1							# $s1 = $a1 = lo
@@ -254,13 +254,13 @@ recursive_merge:
 	sw $s3, 0($sp)							# write $s3 = aux on stack
 	jal merge                               # merge(a, lo, mid, hi, aux);
 
-	lw $ra, 20($sp)							# Load ra from stack
+	lw $ra, 20($sp)
 	lw $s4, 16($sp)
-	lw $s3, 12($sp)							# Load $s3 on stack
-	lw $s2, 8($sp)							# Load $s2 on stack
-	lw $s1, 4($sp)							# Load $s1 on stack
-	lw $s0, 0($sp)							# Load $s0 on stack
-	addi $sp, $sp, 24						# increase stackpointer to free the mid value, sp and fp
+	lw $s3, 12($sp)
+	lw $s2, 8($sp)
+	lw $s1, 4($sp)
+	lw $s0, 0($sp)
+	addi $sp, $sp, 24						# free stack
 
 	jr $ra
 
@@ -271,7 +271,7 @@ exit_split:
 	lw $s2, 8($sp)							# Restore $s2 from stack
 	lw $s1, 4($sp)							# Restore $s1 from stack
 	lw $s0, 0($sp)							# Restore $s0 from stack
-	addi $sp, $sp, 24						# Free memory on stack
+	addi $sp, $sp, 24						# Free stack
 
 	jr $ra
 #=================================End of split logic
@@ -334,7 +334,7 @@ first_lvl_if:
 	jal assign_array_content                # a[k] = aux[j] ;
 
 	addi $s5, $s5, 1 						# $s5 = j = j++
-	addi $s6, $s6, 1						# $s6 = k + 1
+	addi $s6, $s6, 1						# $s6 = k = k + 1
 	j merge_second_loop						# go back to loop beginning
 
 first_lvl_else:
@@ -396,13 +396,13 @@ exit_second_loop:
 	lw $s7, 28($sp)
 	lw $s6, 24($sp)
 	lw $s5, 20($sp)
-	lw $s4, 16($sp)							# restore $s4 on stack
-	lw $s3, 12($sp)							# restore $s3 on stack
-	lw $s2, 8($sp)							# restore $s2 on stack
-	lw $s1, 4($sp)							# restore $s1 on stack
-	lw $s0, 0($sp)							# restore $s0 on stack
+	lw $s4, 16($sp)							# restore $s4 from stack
+	lw $s3, 12($sp)							# restore $s3 from stack
+	lw $s2, 8($sp)							# restore $s2 from stack
+	lw $s1, 4($sp)							# restore $s1 from stack
+	lw $s0, 0($sp)							# restore $s0 from stack
 
-	addi $sp, $sp, 40						# make space on stack + delete aux[k] from stack stored by calling procedure
+	addi $sp, $sp, 40						# free stack + delete aux[k] from stack stored by calling procedure
 
 	jr $ra
 
@@ -545,7 +545,6 @@ generate_list:
 
 generate_list_loop:
 	beq $s0, $zero, exit_generate_list_loop # if n reaches 0 exit
-    addi $s0, $s0, -1  						# TBD $s0 = n = n -1
 	move $a0, $s1							# $a0 = $s1 = min_value
 	move $a1, $s2 							# $a1 = $s2 = max_value
 	
@@ -554,7 +553,7 @@ generate_list_loop:
 	swc1 $f0, 0($fp)						# save item at current position of heap	
 	
 	addi $fp, $fp, 4
-
+    addi $s0, $s0, -1  						# $s0 = n = n -1
 	j generate_list_loop					# jump to list loop
 
 exit_generate_list_loop:
@@ -575,7 +574,7 @@ open_output_file:
 	la   $a0, output_file					# output file name
 	li   $a1, 1        						# Open for writing (flags are 0: read, 1: write)
 	li   $a2, 0        						# mode is ignored
-	syscall            						# open a file (file descriptor returned in $v0)
+	syscall            						# $v0 = fopen(output_file, "w" );
 	
 	sw $ra, 0($sp)
 	addi $sp, $sp, 4
@@ -589,7 +588,7 @@ create_output_file:
 	la   $a0, output_file					# output file name
 	li $a1, 0x102   						# create file       
 	li $a2, 0x1FF  							# set permissions
-	syscall            						# open a file (file descriptor returned in $v0)
+	syscall            						# $ v0 = fopen(output_file, "w+");
 	
 	sw $ra, 0($sp)
 	addi $sp, $sp, 4
@@ -852,7 +851,7 @@ read_from_file:
 	syscall            						# fclose(input_file)
 	
 	addi $t0, $zero, -1
-	jal open_output_file					# opentarget file
+	jal open_output_file					# open target file
 	beq $v0, $t0, create_output_file		# if( fileOutputDescriptor == -1){create the file}
 	move $s6, $v0      						# $s6 = $v0 = fileOutputDescriptor
 	
