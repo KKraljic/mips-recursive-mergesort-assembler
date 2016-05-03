@@ -20,12 +20,13 @@ print_sorted_message: .asciiz "\nYour sorted array is:\n"
 error_unknown_input: .asciiz "\nError: This is nit a valid parameter. Please try it again.\n"
 error_invalid_input_message: .asciiz "\nError: Your min and max value are either in wrong order or they are the same. Please try it again.\n\n"
 error_negative_amount_message: .asciiz "\nYou tried to get a negative amount. We're not magicians. Try it again."
-error_exceeded_range_message: .asciiz "\nIt seems that you are not getting enough... Try it again. Smob."
+error_exceeded_range_message: .asciiz "\nIt seems that you are not getting enough... Try it again.\n"
 error_invalid_char_message: .asciiz "\nYou did not enter a valid number. Hint:([0-9A-F]{8})(,[0-9A-F]{8})*\.\n"
 error_file_not_found_message: .asciiz "\nThe file 'mergesort_recursive_input.txt' was not found in c:\assembler\ . Please check if the file is available.\n\n"
 
 #constants
 const_max_value: .word 2147483647			# max_value = 2^31 -1
+const_max_n: .word 95001					# max_n = 95000
 const_a: .word 1103515245 					# init a, value for 32bit CPU
 const_b: .word 12345 						# init b
 const_m: .word 2147483648 					# equals 2^(31)
@@ -721,6 +722,7 @@ auto_generate_numbers:
 	move $s6, $v0      						# $s6 = $v0 = fileOutputDescriptor;
 	
 	lw $s0, const_m 						# $s0 = const_m = 2^31 maximal number we support
+	lw $s4, const_max_n						# $s4 = const_max_n = 95000
 	la $a0, n_input_message					# Load input message for n
 	li $v0, 4								# Load I/O code to print string to console
 	syscall									# print string
@@ -730,7 +732,7 @@ auto_generate_numbers:
 	move $s2, $v0							# $s2 = $v0 = n read from input
 
 	ble $s2, $zero, error_negative_amount	# if(n < 0){...}
-	bge $s2, $s0, error_exceeded_range		# if (n >= const_m) {...}
+	bge $s2, $s4, error_exceeded_range		# if (n >= const_max_n) {...}
 	
 	la $a0, min_value_input_message			# Load input message for the min_value
 	li $v0, 4								# Load I/O code to print string to console
